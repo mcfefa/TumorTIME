@@ -309,130 +309,145 @@ function main(user_par=nothing)
 end
 
 
-function TumorTIMEpipeline(file, marker)
-# file = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
-# marker = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
+function TumorTIMEpipeline(file, marker, panelName, panelLoc)
 
-indName = file[5:13]
+	# file wants a string name of the file that has the single-cell measurements in it
+	# file = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
 
-df, interdist, intradist, inputfile = main((inputfile=file,classifierLabels=marker,numPairCutoff=5,savePlots=false,saveData=false))
+	# marker wants a vector of strings that are the markers in the panel
+	# marker = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
 
-stats = [:mean,:median,:std,:var,:kurtosis,:skewness]
-interdist_stats = Dict(k => NamedTuple(stat => eval(stat)(v) for stat in stats) for (k,v) in interdist if !isempty(v))
-intradist_stats = Dict(k => NamedTuple(stat => eval(stat)(v) for stat in stats) for (k,v) in intradist if !isempty(v))
+	# panelName wants a string that identifies which panel subfolder ("Panel-1" or "Panel-2") to use
+	# panelLoc wants a string that identifies which location folder (tumor, stroma, interface, normal) to use
 
-interdist_stats_df = DataFrame(name=[], mean=[], median=[], std=[], var=[], kurtosis=[], skewness=[])
-for (k,v) in interdist_stats
-	append!(interdist_stats_df, hcat(DataFrame(name = k), DataFrame([v])))
-end
+	## identifies the patient name based on the SP number
+	indName = file[5:13]
 
-function MakeDistributions(data)
-	result = Dict()
-	for (k,v) in data 
-		if !isempty(v)
-			Hist = fit(Histogram, v)
-			dist = UvBinnedDist(Hist)
-			result[k] = dist
-		end
+	## identifies the patient name with the location on the slide
+	splitname = split(file,".")[1]
+
+	df, interdist, intradist, inputfile = main((inputfile=file,classifierLabels=marker,numPairCutoff=5,savePlots=false,saveData=false))
+
+	stats = [:mean,:median,:std,:var,:kurtosis,:skewness]
+	interdist_stats = Dict(k => NamedTuple(stat => eval(stat)(v) for stat in stats) for (k,v) in interdist if !isempty(v))
+	intradist_stats = Dict(k => NamedTuple(stat => eval(stat)(v) for stat in stats) for (k,v) in intradist if !isempty(v))
+
+	interdist_stats_df = DataFrame(name=[], mean=[], median=[], std=[], var=[], kurtosis=[], skewness=[])
+	for (k,v) in interdist_stats
+		append!(interdist_stats_df, hcat(DataFrame(name = k), DataFrame([v])))
 	end
-	return result
-end
 
-function RunKSTest(data, stats)
-	kstests_col = DataFrame(ks_result = [], ks_p = [])
-	for (k,v) in data
-		if !isempty(v)
-			res = ExactOneSampleKSTest(v, customDist())
-			append!(kstests_col, DataFrame(ks_result=res.δ, ks_p = pvalue(res)))
+	function MakeDistributions(data)
+		result = Dict()
+		for (k,v) in data 
+			if !isempty(v)
+				Hist = fit(Histogram, v)
+				dist = UvBinnedDist(Hist)
+				result[k] = dist
+			end
 		end
+		return result
 	end
-	stats=hcat(stats,kstests_col)
-	return stats
-end
 
-KSResults = RunKSTest(interdist,interdist_stats_df)
-
-function RunADTest(data, stats)
-	adtests_col = DataFrame(ad_result = [], ad_p = [])
-	for (k,v) in data
-		if !isempty(v)
-			res1 = OneSampleADTest(v, customDist())
-			append!(adtests_col, DataFrame(ad_result = res1.A², ad_p=(pvalue(res1))))
+	function RunKSTest(data, stats)
+		kstests_col = DataFrame(ks_result = [], ks_p = [])
+		for (k,v) in data
+			if !isempty(v)
+				res = ExactOneSampleKSTest(v, customDist())
+				append!(kstests_col, DataFrame(ks_result=res.δ, ks_p = pvalue(res)))
+			end
 		end
+		stats=hcat(stats,kstests_col)
+		return stats
 	end
-	stats=hcat(stats,adtests_col)
-	return stats
+
+	KSResults = RunKSTest(interdist,interdist_stats_df)
+
+	function RunADTest(data, stats)
+		adtests_col = DataFrame(ad_result = [], ad_p = [])
+		for (k,v) in data
+			if !isempty(v)
+				res1 = OneSampleADTest(v, customDist())
+				append!(adtests_col, DataFrame(ad_result = res1.A², ad_p=(pvalue(res1))))
+			end
+		end
+		stats=hcat(stats,adtests_col)
+		return stats
+	end
+
+	ADResults=RunADTest(interdist,KSResults)
+
+	# add a column to statistics DF that has patient name 
+	ADResults[:,:patient] .= indName 
+
+	# write interdistance statistcs to a CSV file 
+	@time CSV.write(string(splitname,".interdistances_stats",Dates.today(),".csv"), ADResults)
+
+	# loading clinical information
+	println("INFO: Time to load clinical data ")
+	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
+	rawdatadir = string(rawdatadirbase,"\\", panelName, "\\", panelLoc)
+	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
+	@time clinical_raw = CSV.read(string(clindir,"\\ccRCC-TIME-clinical-2022-09-27.csv"), DataFrame, header=1);
+
+	show(ADResults)
+	show(clinical_raw)
+
+	joinkey(i) = (i.patient)
+	joinkey2(i) = (i.patient[1:9]) 
+
+	show(joinkey(ADResults))
+	show(joinkey)
+
+	## !!!!!!!!!!!!!!!!!!!!!
+	## double check that all clinical variables are present 
+	@time DFFinal = @from i in ADResults begin
+		@join j in clinical_raw on joinkey(i) equals joinkey(j)
+		@select {i.patient, 
+				i.name, 
+				i.mean, 
+				i.median, 
+				i.std, i.var, 
+				i.kurtosis, i.skewness, i.ks_result, i.ks_p, 
+				i.ad_result, i.ad_p, 
+				EGFRnormReads=j.EGFRnormReads, 
+				EGFRalphaReads=j.EGFRalphaReads,
+				EGFRbetaReads=j.EGFRbetaReads,
+				EGFRgammaReads=j.EGFRgammaReads,
+				Gender=j.Gender, Race=j.Race, 
+				AgeDiagnosis=j.AgeDiagnosis, AgeSurgery=j.AgeSurgery, 
+				Histology=j.Histology, Laterality=j.Laterality, 
+				Grade=j.Grade, Size=j.Size, 
+				SarcomatoidStatus=j.SarcomatoidStatus, 
+				RhabdoidStatus=j.RhabdoidStatus, 
+				pT=j.pT, pN=j.pN, pM=j.pM, 
+				CytoreductiveSurgStatus=j.CytoreductiveSurg, 
+				RFS=j.RFS, OS=j.OverallSurvival, CauseOfDeath=j.CauseOfDeath, 
+				DeathStatus=j.EventDeath
+		}
+		@collect DataFrame;
+	end
+
+	# write merged statistics and clinical data for a single patient to a file 
+	@time CSV.write(string(splitname,".interdistances_stats+clin",Dates.today(),".csv"), DFFinal)
+	println(string(splitname, " interdistance statistics and clinical data has been saved to CSV"))
+
 end
 
-ADResults=RunADTest(interdist,KSResults)
 
-# add a column to statistics DF that has patient name 
-ADResults[:,:patient] .= indName 
+# file1 = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
 
-# write interdistance statistcs to a CSV file 
-@time CSV.write(string(indName,".interdistances_stats",Dates.today(),".csv"), ADResults)
-
-# loading clinical information
-println("INFO: Time to load clinical data ")
-rawdatadir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\interface"
-clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
-@time clinical_raw = CSV.read(string(clindir,"\\ccRCC-TIME-clinical-2022-09-27.csv"), DataFrame, header=1);
-
-show(ADResults)
-show(clinical_raw)
-
-joinkey(i) = (i.patient)
-joinkey2(i) = (i.patient[1:9]) 
-
-show(joinkey(ADResults))
-show(joinkey)
-
-@time DFFinal = @from i in ADResults begin
-    @join j in clinical_raw on joinkey(i) equals joinkey(j)
-    @select {i.patient, 
-              i.name, 
-              i.mean, 
-              i.median, 
-              i.std, i.var, 
-              i.kurtosis, i.skewness, i.ks_result, i.ks_p, 
-			  i.ad_result, i.ad_p, 
-              EGFRnormReads=j.EGFRnormReads, 
-			  EGFRalphaReads=j.EGFRalphaReads,
-			  EGFRbetaReads=j.EGFRbetaReads,
-			  EGFRgammaReads=j.EGFRgammaReads,
-              Gender=j.Gender, Race=j.Race, 
-              AgeDiagnosis=j.AgeDiagnosis, AgeSurgery=j.AgeSurgery, 
-			  Histology=j.Histology, Laterality=j.Laterality, 
-              Grade=j.Grade, Size=j.Size, 
-              SarcomatoidStatus=j.SarcomatoidStatus, 
-              RhabdoidStatus=j.RhabdoidStatus, 
-              pT=j.pT, pN=j.pN, pM=j.pM, 
-              CytoreductiveSurgStatus=j.CytoreductiveSurg, 
-              RFS=j.RFS, OS=j.OverallSurvival, CauseOfDeath=j.CauseOfDeath, 
-              DeathStatus=j.EventDeath
-    }
-    @collect DataFrame;
-end
-
-# write merged statistics and clinical data for a single patient to a file 
-@time CSV.write(string(indName,".interdistances_stats+clin",Dates.today(),".csv"), DFFinal)
-println(string(indName, " interdistance statistics and clinical data has been saved to CSV"))
-
-end
-
-
-file1 = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
+## Panel 1 Markers
 markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
-TumorTIMEpipeline(file1, markerPanel)
 
-# ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox(UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1")
-#for i in 1:length(names_of_interdistances)
-#	name = names_of_interdistances[i] ## and make it okay to be in a file name, replace / with a +
-#	distOfInterest = interdist[names_of_interdistances[i]][2]
-#	CSV.write(string("SP09-1997 A8_[52341,12388].interdistances_",name,".CSV"), distOfInterest)
-#end
+## Reads all files in the directory
+##    note, this is looking at the interface location
+ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\interface")
 
-
+for i in 1:4 #size(ReadingFiles)[1]
+	filenametemp = ReadingFiles[i]
+	TumorTIMEpipeline(filenametemp, markerPanel, "Panel-1", "interface")
+end
 #
 
 #plotting method?
