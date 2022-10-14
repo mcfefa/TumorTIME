@@ -308,27 +308,19 @@ function main(user_par=nothing)
 
 end
 
-file = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
-marker = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
-#indName = file[5:13]
+
+function TumorTIMEpipeline(file, marker)
+# file = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
+# marker = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
+
+indName = file[5:13]
 
 df, interdist, intradist, inputfile = main((inputfile=file,classifierLabels=marker,numPairCutoff=5,savePlots=false,saveData=false))
-
-
-#for i in 1:21
-#	interdistances_names = collect(interdist)[i][1]
-#	println(interdistances_names)	
-#end
 
 stats = [:mean,:median,:std,:var,:kurtosis,:skewness]
 interdist_stats = Dict(k => NamedTuple(stat => eval(stat)(v) for stat in stats) for (k,v) in interdist if !isempty(v))
 intradist_stats = Dict(k => NamedTuple(stat => eval(stat)(v) for stat in stats) for (k,v) in intradist if !isempty(v))
 
-#names_of_interdistances = convert(DataFrame, ["cd68/stroma";"pd-l1/nuclei";"cd68/cd206";"cd206/stroma";"cd206/tumor";"cd206/cd163";"pd-l1/tumor";"cd206/nuclei";"nuclei/tumor";"pd-l1/stroma";"cd163/pd-l1";"cd163/stroma";"nuclei/stroma";"cd206/pd-l1";"cd163/nuclei";"cd163/tumor";"tumor/stroma";"cd68/pd-l1";"cd68/nuclei";"cd68/cd163";"cd68/tumor"])
-#replace(names_of_interdistances, "/" => "+")
-#println(names_of_interdistances)
-
-#interdists_stats_df = DataFrame("name"=>[],"mean"=>[],"median"=>[],"std"=>[],"var"=>[],"kurtosis"=>[],"skewness"=>[])
 interdist_stats_df = DataFrame(name=[], mean=[], median=[], std=[], var=[], kurtosis=[], skewness=[])
 for (k,v) in interdist_stats
 	append!(interdist_stats_df, hcat(DataFrame(name = k), DataFrame([v])))
@@ -345,7 +337,6 @@ function MakeDistributions(data)
 	end
 	return result
 end
-
 
 function RunKSTest(data, stats)
 	kstests_col = DataFrame(ks_result = [], ks_p = [])
@@ -375,15 +366,11 @@ end
 
 ADResults=RunADTest(interdist,KSResults)
 
-ADResults[:,:patient] .= indName #inputfile[5:13] #"SP09-1997"
+# add a column to statistics DF that has patient name 
+ADResults[:,:patient] .= indName 
 
-#dfnew1 = DataFrame([mean median std var kurtosis skewness; a1 b1 c1 d1 e1 f1], :auto)
-#CSV.write("SP09-1997 A8_[52341,12388].interdistances.stastistics.CSV", interdist_stats_df)
+# write interdistance statistcs to a CSV file 
 @time CSV.write(string(indName,".interdistances_stats",Dates.today(),".csv"), ADResults)
-#my_csv = open("SP09-1997 A8_[52341,12388].interdistances.stastistics.CSV", "a")
-#for name in missing_names
-#  write(my_csv, name)
-#end
 
 # loading clinical information
 println("INFO: Time to load clinical data ")
@@ -393,7 +380,6 @@ clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRC
 
 show(ADResults)
 show(clinical_raw)
-
 
 joinkey(i) = (i.patient)
 joinkey2(i) = (i.patient[1:9]) 
@@ -428,7 +414,17 @@ show(joinkey)
     @collect DataFrame;
 end
 
+# write merged statistics and clinical data for a single patient to a file 
 @time CSV.write(string(indName,".interdistances_stats+clin",Dates.today(),".csv"), DFFinal)
+println(string(indName, " interdistance statistics and clinical data has been saved to CSV"))
+
+end
+
+
+file1 = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
+markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
+TumorTIMEpipeline(file1, markerPanel)
+
 # ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox(UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1")
 #for i in 1:length(names_of_interdistances)
 #	name = names_of_interdistances[i] ## and make it okay to be in a file name, replace / with a +
