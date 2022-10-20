@@ -111,12 +111,14 @@ function extractCellTypes(df::DataFrame)
 
 end
 
-function computeDistances(locations::Dict)
+function computeDistances(df::DataFrame)
 
 	# We will save the intra and inter-pairwise distances to individual 
 	# dictionaries
 	intradist = Dict{String,Vector{Float64}}()
 	interdist = Dict{String,Vector{Float64}}()
+
+	cellTypes,cellLocations = extractCellTypes(df)
 
 	# Save enumerator
 	enumKeys = enumerate(keys(cellLocations))
