@@ -15,7 +15,7 @@
 
 =#
 
-using CSV,DataFrames,Parameters, Statistics, StatsBase, HypothesisTests, Cairo, CairoMakie, Colors, Makie, Distributions, QuadGK, EmpiricalDistributions, Dates, Query
+using CSV,DataFrames,Parameters, Statistics, StatsBase, HypothesisTests, Cairo, CairoMakie, Colors, Makie, Distributions, QuadGK, EmpiricalDistributions, Dates, Query, Missings
 import Distributions: cdf
 # Used to split a tuple by components
 unzip(a) = map(x->getfield.(a, x), fieldnames(eltype(a)))
@@ -293,10 +293,10 @@ function main(user_par=nothing)
 	end
 
 	#inputfile = user_par
-	show(inputfile)
+	# show(inputfile)
 	#= For now, we keep the df, but we could just call it directly to save memory if needed =#
 	df = readFile(string(dir,"\\",inputfile))	
-	show(df)
+	#show(df)
 
 	# Get inter and intra cellular distances
 	interdist,intradist = computeDistances(df)
@@ -390,14 +390,10 @@ function TumorTIMEpipeline(file, marker, panelName, panelLoc)
 	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
 	@time clinical_raw = CSV.read(string(clindir,"\\ccRCC-TIME-clinical-2022-09-27.csv"), DataFrame, header=1);
 
-	show(ADResults)
-	show(clinical_raw)
+	# show(ADResults)
+	# show(clinical_raw)
 
 	joinkey(i) = (i.patient)
-	joinkey2(i) = (i.patient[1:9]) 
-
-	show(joinkey(ADResults))
-	show(joinkey)
 
 	## !!!!!!!!!!!!!!!!!!!!!
 	## double check that all clinical variables are present 
@@ -444,11 +440,51 @@ markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
 ##    note, this is looking at the interface location
 ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\interface")
 
-for i in 1:4 #size(ReadingFiles)[1]
-	filenametemp = ReadingFiles[i]
-	TumorTIMEpipeline(filenametemp, markerPanel, "Panel-1", "interface")
+# for i in 1:size(ReadingFiles)[1]-2
+# 	filenametemp = ReadingFiles[i]
+# 	TumorTIMEpipeline(filenametemp, markerPanel, "Panel-1", "interface")
+# end
+
+function ConcatFiles(directory)
+
+	#Read files in results from pipeline folder  
+	ReadingFiles2 = readdir(directory)
+	println(ReadingFiles2[1])
+
+	longDF = CSV.read(string(directory,"\\",ReadingFiles2[1]), DataFrame, header=1, types=Dict(:col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int, :col31=>Union{Missing,Int,String}))
+	# add a column to individual patient and loc DF that has the filename to be able to pull out location later if needed
+	longDF[:,:filename] .= ReadingFiles2[1] 
+
+	#println(names(longDF)[31])
+	println(longDF)
+
+	#Create for loop that runs through files of stats and clincial data 
+	for i in 2:size(ReadingFiles2)[1]-2
+		filenametemp2 = ReadingFiles2[i]
+		println(filenametemp2)
+
+		tmpdf = CSV.read(string(directory,"\\",ReadingFiles2[i]), DataFrame, header=1, types=Dict(:col31=>Union{Missing,Int,String}, :col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int))
+		tmpdf[:,:filename] .= ReadingFiles2[i] 
+
+		append!(longDF,tmpdf)
+	end
+
+	# write out CSV of full dataframe --- longDF
+	@time CSV.write(string("All-Clinical-Data-for-Interdistances",Dates.today(),".csv"), longDF)
+
+	# Query to identify individual pairs and then save those as files 
+	Query1= @from i in longDF begin
+			@where i.name = "cd68/stroma"
+			@select {pair=i.name, i.filename}
+			@collect DataFrame
+	end
 end
-#
+
+individdir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\interface\\Results from Pipeline\\"
+ConcatFiles(individdir)
+
+
+
 
 #plotting method?
 # histogram([data for data in dist if length(data)>50],normalize=:pdf,bins=:scott)
