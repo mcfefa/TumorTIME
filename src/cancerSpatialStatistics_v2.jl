@@ -8,14 +8,14 @@
 		Output desired
 
 	- Read CSV file
-	- Compute cell center locations
+	- Compute cell center location
 	- Normalize to unit box
 	- Compute pair-wise distances
 
 
 =#
 
-using CSV,DataFrames,Parameters, Statistics, StatsBase, HypothesisTests, Cairo, CairoMakie, Colors, Makie, Distributions, QuadGK, EmpiricalDistributions, Dates, Query
+using CSV, DataFrames, Parameters, Statistics, StatsBase, HypothesisTests, Cairo, CairoMakie, Colors, Makie, Distributions, QuadGK, EmpiricalDistributions, Dates, Query, Missings;
 import Distributions: cdf
 # Used to split a tuple by components
 unzip(a) = map(x->getfield.(a, x), fieldnames(eltype(a)))
@@ -32,13 +32,13 @@ function readFile(filename::String)
 
 	# convert all headers to lowercase to avoid parsing errors
 	for i in 1:size(names(df))[1]
-		validity = isvalid(names(dfT)[i])
+		validity = isvalid(names(df)[i])
 		if validity == true
 			# rename!(df, Dict(:i => "A", :x => "X"))
 			rename!(df, Dict(names(df)[i] => lowercase(names(df)[i])))
 		else
 			# replace(str,r => "" )
-			fixedName = replace(names(dfT)[i], "\xb5m" => "micro")
+			fixedName = replace(names(df)[i], "\xb5m" => "micro")
 			fixedName2 = replace(fixedName, "\xb2" => "sq")
 			rename!(df, Dict(names(df)[i] => lowercase(fixedName2)))
 		end
@@ -275,7 +275,7 @@ function makePlots(dist::Dict;len::Int=1800,wid::Int=2400,
 function main(user_par=nothing)
 
 	#dir = "C:\\Users\\camara.casson\\OneDrive - University of Florida\\Desktop\\TumorTIME\\src"
-	dir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\interface"
+	dir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor"
 	# Grab the parameters from the struct
 	if user_par !== nothing
 		show(user_par)
@@ -293,10 +293,10 @@ function main(user_par=nothing)
 	end
 
 	#inputfile = user_par
-	show(inputfile)
+	# show(inputfile)
 	#= For now, we keep the df, but we could just call it directly to save memory if needed =#
 	df = readFile(string(dir,"\\",inputfile))	
-	show(df)
+	#show(df)
 
 	# Get inter and intra cellular distances
 	interdist,intradist = computeDistances(df)
@@ -309,7 +309,7 @@ function main(user_par=nothing)
 end
 
 
-function TumorTIMEpipeline(file, marker, panelName, panelLoc)
+function TumorTIMEPipeline(file, marker, panelName, panelLoc)
 
 	# file wants a string name of the file that has the single-cell measurements in it
 	# file = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
@@ -321,12 +321,13 @@ function TumorTIMEpipeline(file, marker, panelName, panelLoc)
 	# panelLoc wants a string that identifies which location folder (tumor, stroma, interface, normal) to use
 
 	## identifies the patient name based on the SP number
-	indName = file[5:13]
+	println(file)
+	indName = split(file,"_")[2]
 
 	## identifies the patient name with the location on the slide
 	splitname = split(file,".")[1]
 
-	df, interdist, intradist, inputfile = main((inputfile=file,classifierLabels=marker,numPairCutoff=5,savePlots=false,saveData=false))
+	df, interdist, intradist, inputfile = main((inputfile=file,classifierLabels=marker,numPairCutoff=3,savePlots=false,saveData=false))
 
 	stats = [:mean,:median,:std,:var,:kurtosis,:skewness]
 	interdist_stats = Dict(k => NamedTuple(stat => eval(stat)(v) for stat in stats) for (k,v) in interdist if !isempty(v))
@@ -388,16 +389,34 @@ function TumorTIMEpipeline(file, marker, panelName, panelLoc)
 	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
 	rawdatadir = string(rawdatadirbase,"\\", panelName, "\\", panelLoc)
 	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
-	@time clinical_raw = CSV.read(string(clindir,"\\ccRCC-TIME-clinical-2022-09-27.csv"), DataFrame, header=1);
-
-	show(ADResults)
-	show(clinical_raw)
+	coltypes1 = Any[Float64 for i=1:30]
+	coltypes1[1]=String
+	coltypes1[2]=String
+	coltypes1[4]=Union{Missing, String}
+	coltypes1[5]=Union{Missing, String}
+	coltypes1[6]=Union{Missing, String}
+	coltypes1[7]=Union{Missing, String}
+	coltypes1[8]=String
+	coltypes1[9]=String
+	coltypes1[10]=Float64
+	coltypes1[11]=Float64
+	coltypes1[23]=Union{Missing, String}
+	coltypes1[25]=String
+	coltypes1[26]=Int
+	coltypes1[18]=String
+	coltypes1[19]=Union{Missing, String}
+	coltypes1[21]=String
+	coltypes1[30]=String
+	coltypes1[22]=Union{Missing, String}
+	@time clinical_raw = CSV.read(string(clindir,"\\ccRCC-TIME-clinical-2022-09-27.csv"), DataFrame, header=1, types=coltypes1);
+	
+	# show(ADResults)
+	# show(clinical_raw)
 
 	joinkey(i) = (i.patient)
-	joinkey2(i) = (i.patient[1:9]) 
 
-	show(joinkey(ADResults))
-	show(joinkey)
+	#println(joinkey(ADResults))
+	#println(joinkey(clinical_raw))
 
 	## !!!!!!!!!!!!!!!!!!!!!
 	## double check that all clinical variables are present 
@@ -437,18 +456,111 @@ end
 
 # file1 = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
 
-## Panel 1 Markers
+## Panel 2 Markers
 markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
 
 ## Reads all files in the directory
 ##    note, this is looking at the interface location
-ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\interface")
+ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor")
 
-for i in 1:4 #size(ReadingFiles)[1]
+for i in 1:size(ReadingFiles)[1]
 	filenametemp = ReadingFiles[i]
-	TumorTIMEpipeline(filenametemp, markerPanel, "Panel-1", "interface")
+	TumorTIMEPipeline(filenametemp, markerPanel, "Panel-2", "tumor")
 end
-#
+
+# function ConcatFiles(directory)
+
+# 	#Read files in results from pipeline folder  
+# 	ReadingFiles2 = readdir(directory)
+# 	println(ReadingFiles2)
+
+# 	coltypesL = Any[Float64 for i=1:34]
+# 	coltypesL[1]=String
+# 	coltypesL[2]=String
+# 	coltypesL[13]=Union{Missing, String}
+# 	coltypesL[14]=Union{Missing, String}
+# 	coltypesL[15]=Union{Missing, String}
+# 	coltypesL[16]=Union{Missing, String}
+# 	coltypesL[17]=String
+# 	coltypesL[18]=String
+# 	coltypesL[21]=String
+# 	coltypesL[22]=String
+# 	coltypesL[23]=Union{Missing, Int}
+# 	coltypesL[25]=String
+# 	coltypesL[26]=String
+# 	coltypesL[27]=String
+# 	coltypesL[28]=Union{Missing, String}
+# 	coltypesL[29]=String
+# 	coltypesL[30]=String
+# 	coltypesL[31]=Union{Missing, String}
+# 	longDF = CSV.read(string(directory,"\\",ReadingFiles2[1]), DataFrame, header=1, types=coltypesL)#Dict(:col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int, :col31=>Union{Missing,Int,String}))
+# 	# add a column to individual patient and loc DF that has the filename to be able to pull out location later if needed
+# 	longDF[:,:filename] .= ReadingFiles2[1] 
+
+# 	#println(names(longDF)[31])
+# 	println(longDF)
+
+# 	#Create for loop that runs through files of stats and clincial data 
+# 	for i in 2:size(ReadingFiles2)[1]-4
+# 		filenametemp2 = ReadingFiles2[i]
+# 		println(filenametemp2)
+
+# 		#tmpdf = CSV.read(string(directory,"\\",ReadingFiles2[i]), DataFrame, header=1, types=Dict(:col31=>Union{Missing,Int,String}, :col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int))
+# 		coltypes = Any[Float64 for i=1:34]
+# 		coltypes[1]=String
+# 		coltypes[2]=String
+# 		coltypes[13]=Union{Missing, String}
+# 		coltypes[14]=Union{Missing, String}
+# 		coltypes[15]=Union{Missing, String}
+# 		coltypes[16]=Union{Missing, String}
+# 		coltypes[17]=String
+# 		coltypes[18]=String
+# 		coltypes[21]=String
+# 		coltypes[22]=String
+# 		coltypes[23]=Union{Missing, Int}
+# 		coltypes[25]=String
+# 		coltypes[26]=String
+# 		coltypes[27]=String
+# 		coltypes[28]=Union{Missing, String}
+# 		coltypes[29]=String
+# 		coltypes[30]=String
+# 		coltypes[31]=Union{Missing, String}
+# 		#tmpdf = CSV.read(string(directory,"\\",filenametemp2), DataFrame, header=1, types=Dict(:col31=>Union{Missing,String}, :col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int))
+# 		tmpdf = CSV.read(string(directory,"\\",filenametemp2), DataFrame, header=1, types=coltypes)
+# 		tmpdf[:,:filename] .= ReadingFiles2[i] 
+
+# 		append!(longDF,tmpdf)
+# 	end
+
+# 	# write out CSV of full dataframe --- longDF
+# 	@time CSV.write(string("All-Clinical-Data-for-Interdistances-at-Panel1-Tumor",Dates.today(),".csv"), longDF)
+
+# 	# Query to identify individual pairs and then save those as files 
+# 	#Loop over each of the different names
+# 	listNames = unique(longDF[:,:name])
+# 	println(typeof(listNames))
+
+# 	for n in 1:length(listNames)
+# 		Query1= @from i in longDF begin
+# 			@where i.name == listNames[n]
+# 			@select i #{pair=i.name, i.filename}
+# 			@collect DataFrame
+# 		end
+# 		replace(listNames[n], "/" => "+") 
+# 		@time CSV.write(string("Query for ", replace(listNames[n], "/" => "+"), Dates.today(),".csv"), Query1)
+# 	end
+
+
+
+
+# end
+
+# individdir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\tumor\\Results from Pipeline\\"
+# #individdir2="C:\\Users\\camara.casson\\OneDrive - University of Florida\\Desktop\\TumorTIME\\src"
+# ConcatFiles(individdir)
+
+
+
 
 #plotting method?
 # histogram([data for data in dist if length(data)>50],normalize=:pdf,bins=:scott)
