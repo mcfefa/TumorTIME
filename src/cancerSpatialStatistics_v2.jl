@@ -309,7 +309,7 @@ function main(user_par=nothing)
 end
 
 
-function TumorTIMEPipeline(file, marker, panelName, panelLoc)
+function TumorTIMEPipeline(file, marker, panelName, panelLoc) #, datadir::nothing, clindir::nothing, writedir::nothing)
 
 	# file wants a string name of the file that has the single-cell measurements in it
 	# file = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
@@ -320,12 +320,33 @@ function TumorTIMEPipeline(file, marker, panelName, panelLoc)
 	# panelName wants a string that identifies which panel subfolder ("Panel-1" or "Panel-2") to use
 	# panelLoc wants a string that identifies which location folder (tumor, stroma, interface, normal) to use
 
+	## TO ADD FUNCTINOALITY TO PIPELINE TO OTHER USERS
+	# datadir, clindir, and writedir is an optional entry that allows the user to input a directory location 
+	#   where the data is coming from, clinical information, and where the user want the results saved
+
+	## directories of note in this repository 
+	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
+	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
+
+	## if statements for adding additional functionality 
+		# if rawdatadirbase == nothing
+		# 	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
+		# end
+
+		# if clindir == nothing
+		# 	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
+		# end
+
+		# if writedir == nothing
+		# 	writedir = ""
+		# end
+
 	## identifies the patient name based on the SP number
-	println(file)
-	indName = split(file,"_")[2]
+	## println(file)
+	indName = string(split(file,"_")[2])
 
 	## identifies the patient name with the location on the slide
-	splitname = split(file,".")[1]
+	splitname = string(split(file,".")[1])
 
 	df, interdist, intradist, inputfile = main((inputfile=file,classifierLabels=marker,numPairCutoff=3,savePlots=false,saveData=false))
 
@@ -386,28 +407,26 @@ function TumorTIMEPipeline(file, marker, panelName, panelLoc)
 
 	# loading clinical information
 	println("INFO: Time to load clinical data ")
-	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
+	
 	rawdatadir = string(rawdatadirbase,"\\", panelName, "\\", panelLoc)
-	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
-	coltypes1 = Any[Float64 for i=1:30]
-	coltypes1[1]=String
-	coltypes1[2]=String
-	coltypes1[4]=Union{Missing, String}
-	coltypes1[5]=Union{Missing, String}
-	coltypes1[6]=Union{Missing, String}
-	coltypes1[7]=Union{Missing, String}
-	coltypes1[8]=String
-	coltypes1[9]=String
-	coltypes1[10]=Float64
-	coltypes1[11]=Float64
-	coltypes1[23]=Union{Missing, String}
-	coltypes1[25]=String
-	coltypes1[26]=Int
-	coltypes1[18]=String
-	coltypes1[19]=Union{Missing, String}
-	coltypes1[21]=String
-	coltypes1[30]=String
-	coltypes1[22]=Union{Missing, String}
+	coltypes1 = Any[String for i=1:30]
+	coltypes1[4]=Union{Missing, String}   ## EGFR norm reads
+	coltypes1[5]=Union{Missing, String}   ## EGFR alpha reads
+	coltypes1[6]=Union{Missing, String}   ## EGFR beta reads
+	coltypes1[7]=Union{Missing, String}   ## EGFR gamma reads
+	coltypes1[10]=Float64    ## age at diagnosis
+	coltypes1[11]=Float64    ## age at surgery
+	coltypes1[14]=Int        ## grade
+	coltypes1[15]=Float64    ## size
+	coltypes1[22]=Union{Missing, String}   ## RFS
+	coltypes1[24]=Union{Missing, String}   ## CauseOfDeath
+	coltypes1[25]=Int        ## event of death
+	coltypes1[26]=Int 		 ## overall survival
+	coltypes1[27]=Union{Missing, Int}	   ## OS-IT
+	coltypes1[28]=Union{Missing, Int}	   ## OS-TT
+	coltypes1[29]=Union{Missing, Int}	   ## IMDC
+	coltypes1[30]=Union{Missing, String}   ## sutent neoadvant
+	
 	@time clinical_raw = CSV.read(string(clindir,"\\ccRCC-TIME-clinical-2022-09-27.csv"), DataFrame, header=1, types=coltypes1);
 	
 	# show(ADResults)
@@ -452,7 +471,6 @@ function TumorTIMEPipeline(file, marker, panelName, panelLoc)
 	println(string(splitname, " interdistance statistics and clinical data has been saved to CSV"))
 
 end
-
 
 # file1 = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
 
