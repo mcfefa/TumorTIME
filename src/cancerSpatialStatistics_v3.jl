@@ -367,7 +367,7 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 	NamesOfInterdistP2=["cd68/cd20", "nucleus/pd-l1", "cd20/stroma", "cd68/stroma", "nucleus/tumor", "cd163/nucleus", "cd20/nucleus", "cd206/stroma", "cd206/tumor", "cd206/cd163", "pd-l1/tumor", "cd206/cd20", "pd-l1/stroma", "cd163/pd-l1", 
 	"cd163/stroma", "cd68/nucleus", "cd20/tumor", "cd206/pd-l1", "nucleus/stroma", "cd20/pd-l1", "cd163/tumor", "cd206/cd68", "cd163/cd20", "tumor/stroma", "cd68/pd-l1", "cd206/nucleus", "cd68/cd163", "cd68/tumor"]
    
-
+	InterdistRanges = Dict()
     for i in eachindex(NamesOfInterdistP2)
 		if !isempty(interdist[NamesOfInterdistP2[i]])
     		min1= minimum(interdist[NamesOfInterdistP2[i]])
@@ -376,16 +376,15 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
     		println(max1)
     		size1=length(interdist[NamesOfInterdistP2[i]])
    			println(size1)
-    		range1= LinRange(min1, max1, size1)
-   			println(range1)		
-				for j in range1
-				TheoreticalPDF = nullpdf(range1[j])
-				end
+    		incr1 = (max1-min1)/size1
+			println(incr1)
+			range1= collect(range(min1, max1, size1))
+			InterdistRanges[NamesOfInterdistP2[i]] = range1
 		end
 	end
 end
 TheoreticalPDF = nullpdf(min1:incr:max1)
-
+TheoreticalPDF = nullpdf(range1[j])
 	# function RunCramerVonMisesTest(data,stats)
 	# 	CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
 	# 	for (k,v) in data
