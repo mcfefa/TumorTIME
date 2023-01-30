@@ -307,7 +307,6 @@ function main(user_par=nothing)
 
 	return df,interdist,intradist,inputfile
 
-
 end
 
 
@@ -380,11 +379,14 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 			println(incr1)
 			range1= collect(range(min1, max1, size1))
 			InterdistRanges[NamesOfInterdistP2[i]] = range1
+			for s in (InterdistRanges[NamesOfInterdistP2[i]])
+			TheoreticalPDF = nullpdf(s)
+			end
 		end
 	end
 end
-TheoreticalPDF = nullpdf(min1:incr:max1)
-TheoreticalPDF = nullpdf(range1[j])
+
+
 	# function RunCramerVonMisesTest(data,stats)
 	# 	CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
 	# 	for (k,v) in data
