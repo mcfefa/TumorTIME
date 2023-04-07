@@ -15,7 +15,7 @@
 
 =#
 
-using CSV, DataFrames, Parameters, Statistics, StatsBase, HypothesisTests, Cairo, CairoMakie, Colors, Makie, Distributions, QuadGK, EmpiricalDistributions, Dates, Query, Missings, Distances;
+using CSV, DataFrames, Parameters, Statistics, StatsBase, HypothesisTests, Cairo, CairoMakie, Colors, Makie, Distributions, QuadGK, EmpiricalDistributions, Dates, Query, Missings, Distances, StatsPlots;
 import Distributions: cdf
 # Used to split a tuple by components
 unzip(a) = map(x->getfield.(a, x), fieldnames(eltype(a)))
@@ -233,45 +233,45 @@ function makePlots(dist::Dict;len::Int=1800,wid::Int=2400,
 	
 	end
 
-#function makePlots(plotinfo::Dict,cutoff::Int=0;
- #	xrotation::Int=0,α::Real=1.0)
- #
- #	# Histogram will plot only if there are at least 1 element in the set
- #	title,dist = unzip([(key,val) for (key,val) in plotinfo
- #	if length(val)>cutoff])
- #
- #	numPlots = length(title)
- #
- #	if numPlots < 5
- #		layout = (numPlots,1)
- #	else
- #		sqrootplt=sqrt(numPlots)
- #		mygrid = convert.(Int,(ceil(sqrootplt),floor(sqrootplt)))
- #	end
- #
- #	myplot=plot(dist,
- #	normalize=:pdf,
- #	bins=:sturges,
- #	layout=mygrid,
- #	title=permutedims(title),
- #	label=nothing,
- #	seriestype=:barhist,
- #	xrotation=xrotation,
- #	tickfontsize=α,
- #	titlefontsize=α,
- #	yticks=0:0.5:2
- #	)
+# function makePlots(plotinfo::Dict,cutoff::Int=0;
+#  	xrotation::Int=0,α::Real=1.0)
+ 
+#  	# Histogram will plot only if there are at least 1 element in the set
+#  	title,dist = unzip([(key,val) for (key,val) in plotinfo
+#  	if length(val)>cutoff])
+ 
+#  	numPlots = length(title)
+ 
+#  	if numPlots < 5
+#  		layout = (numPlots,1)
+#  	else
+#  		sqrootplt=sqrt(numPlots)
+#  		mygrid = convert.(Int,(ceil(sqrootplt),floor(sqrootplt)))
+#  	end
+ 
+#  	myplot=plot(dist,
+#  	normalize=:pdf,
+#  	bins=:sturges,
+#  	layout=mygrid,
+#  	title=permutedims(title),
+#  	label=nothing,
+#  	seriestype=:barhist,
+#  	xrotation=xrotation,
+#  	tickfontsize=α,
+#  	titlefontsize=α,
+#  	yticks=0:0.5:2
+#  	)
 
- #	x = 0:0.01:sqrt(2)
+#  	x = 0:0.01:sqrt(2)
 
- #	plot!([(x,map(nullpdf,x)) for i in 1:numPlots],
- #	layout=mygrid,
- #	label=nothing
- #	)
+#  	plot!([(x,map(nullpdf,x)) for i in 1:numPlots],
+#  	layout=mygrid,
+#  	label=nothing
+#  	)
 
- #	return myplot
+#  	return myplot
 
- #end
+#  end
 
 
 function main(user_par=nothing)
@@ -346,13 +346,20 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 		append!(interdist_stats_df, hcat(DataFrame(name = k), DataFrame([v])))
 	end
 
+	#Plotting data with StatsPlots to visualize distributions
+	# histogram(interdist["cd68/stroma"])
+	# dist = A["cd68/stroma"]._bin_pdf
+	# StatsPlots.scatter(dist, leg=false)
+	# StatsPlots.bar!(dist, func=cdf, alpha=0.3)
+
 	function MakeDistributions(data)
+		#Creates distributions fitting with a maximum likelihood estimator to a Weibull distribution
+		#Creates a dictionary with distributions for each marker pair (non-empty)
 		result = Dict()
 		for (k,v) in data 
 			if !isempty(v)
-				Hist = fit(Histogram, v)
-				dist = UvBinnedDist(Hist)
-				result[k] = dist
+				Dist = fit_mle(Weibull,v) 
+				result[k] = Dist
 			end
 		end
 		return result
@@ -430,19 +437,19 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 
 	KSResults = RunKSTest(interdist_distr2,TheoreticalPDFs,interdist_stats_df)
  
-	function RunADTest(dataEmp, dataNull, stats)
-		adtests_col = DataFrame(ad_result = [], ad_p = [])
-		for i in keys(dataNull)
-			dist2 = fit(DiscreteNonParametric,dataNull[i])
-			res1 = OneSampleADTest(dataEmp[i], dist2)
-			append!(adtests_col, DataFrame(ad_result = res1.A², ad_p=(pvalue(res1))))
-		end
+	# function RunADTest(dataEmp, dataNull, stats)
+	# 	adtests_col = DataFrame(ad_result = [], ad_p = [])
+	# 	for i in keys(dataNull)
+	# 		dist2 = fit(DiscreteNonParametric,dataNull[i])
+	# 		res1 = OneSampleADTest(dataEmp[i], dist2)
+	# 		append!(adtests_col, DataFrame(ad_result = res1.A², ad_p=(pvalue(res1))))
+	# 	end
 		
-		stats=hcat(stats,adtests_col)
-		return stats
-	end
+	# 	stats=hcat(stats,adtests_col)
+	# 	return stats
+	# end
 
-	ADResults=RunADTest(interdist_distr2,TheoreticalPDFs,KSResults)
+	# ADResults=RunADTest(interdist_distr2,TheoreticalPDFs,KSResults)
 
 	# function RunCramerVonMisesTest(dataEmp, dataNull, stats)
 	# 	CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
@@ -462,7 +469,7 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 		stats=hcat(stats,gkld_col)
 		return stats
 	end
-	GKLDResults = GenKullbackLeibler(interdist_distr2,TheoreticalPDFs,ADResults)
+	GKLDResults = GenKullbackLeibler(interdist_distr2,TheoreticalPDFs,KSResults)
 	println("Finished GKL Divergence")
 	
 	println("Starting Chebyshev Distance")
@@ -479,19 +486,6 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 	CBSResults = Chebyshev(interdist_distr2,TheoreticalPDFs,GKLDResults)
 	println("Finished Chebyshev Distance")
 
-	println("Starting Hamming Distance")
-	function Hamming(dataEmp,dataNull,stats)
-		hmm_col = DataFrame(hmm_result= [])
-		for i in keys(dataNull)
-			hmm_result = hamming(dataEmp[i],dataNull[i])
-			append!(hmm_col, DataFrame(hmm_result=hmm_result))
-		end
- 
-		stats=hcat(stats,hmm_col)
-		return stats
-	end
-	HMMResults = Hamming(interdist_distr2,TheoreticalPDFs,CBSResults)
-	println("Finished Hamming Distance")
 
 	println("Starting Jensen-Shannon Divergence")
 	function JensenShannon(dataEmp,dataNull,stats)
@@ -504,31 +498,31 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 		stats=hcat(stats,js_col)
 		return stats
 	end
-	JSResults = JensenShannon(interdist_distr2,TheoreticalPDFs,HMMResults)
+	JSResults = JensenShannon(interdist_distr2,TheoreticalPDFs,CBSResults)
 	println("Finished Jensen-Shannon Divergence")
 
-end
-# 	# add a column to statistics DF that has patient name 
-# 	ADResults[:,:patient] .= indName 
 
-# 	# write interdistance statistcs to a CSV file 
-# 	@time CSV.write(string(splitname,".interdistances_stats",Dates.today(),".csv"), KSResults)
+ 	# add a column to statistics DF that has patient name 
+ 	JSResults[:,:patient] .= indName 
+end
+#  	# write interdistance statistcs to a CSV file 
+#  	@time CSV.write(string(splitname,".interdistances_stats",Dates.today(),".csv"), JSResults)
 
 # 	coltypesS = Any[Float64 for i=1:35]
-# 	coltypesS[1]=String
-# 	coltypesS[2]=String
+#  	coltypesS[1]=String
+#  	coltypesS[2]=String
 
 # 	statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results and Analysis\\"
-# 	@time KSResults1 = CSV.read(string(statsdir,"All-Clinical-Data-for-Interdistances-at-Panel1-Tumor2022-10-27.csv"),DataFrame,types=coltypesS)
-# 	KSResults = KSResults1[:,1:12]
+# 	@time JSResults1 = CSV.read(string(statsdir,"All-Clinical-Data-for-Interdistances-at-Panel1-Tumor2022-10-27.csv"),DataFrame,types=coltypesS)
+# 	JSResults = JSResults1[:,1:12]
 
-# 	println(KSResults[1:5,:])
+# 	println(JSResults[1:5,:])
 
 # 	# loading clinical information
 # 	println("INFO: Time to load clinical data ")
 # 	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
 # 	rawdatadir = string(rawdatadirbase,"\\", panelName, "\\", panelLoc)
-# 	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
+# 	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline\\_CutOff5\\Stats" 
 # 	coltypes1 = Any[String for i=1:30]
 # 	coltypes1[4]=Union{Missing, String}   ## EGFR norm reads
 # 	coltypes1[5]=Union{Missing, String}   ## EGFR alpha reads
@@ -558,7 +552,7 @@ end
 
 # 	## !!!!!!!!!!!!!!!!!!!!!
 # 	## double check that all clinical variables are present 
-# 	@time DFFinal = @from i in KSResults begin
+# 	@time DFFinal = @from i in JSResults begin
 # 		@join j in clinical_raw on joinkey(i) equals joinkey(j)
 # 		@select {i.patient, 
 # 				i.name, 
@@ -591,23 +585,23 @@ end
 
 # end
 
-NamesOfInterdistP2=["cd68/cd20", "nucleus/pd-l1", "cd20/stroma", "cd68/stroma", "nucleus/tumor", "cd163/nucleus", "cd20/nucleus", "cd206/stroma", "cd206/tumor", "cd206/cd163", "pd-l1/tumor", "cd206/cd20", "pd-l1/stroma", "cd163/pd-l1", 
-"cd163/stroma", "cd68/nucleus", "cd20/tumor", "cd206/pd-l1", "nucleus/stroma", "cd20/pd-l1", "cd163/tumor", "cd206/cd68", "cd163/cd20", "tumor/stroma", "cd68/pd-l1", "cd206/nucleus", "cd68/cd163", "cd68/tumor"]
+# NamesOfInterdistP2=["cd68/cd20", "nucleus/pd-l1", "cd20/stroma", "cd68/stroma", "nucleus/tumor", "cd163/nucleus", "cd20/nucleus", "cd206/stroma", "cd206/tumor", "cd206/cd163", "pd-l1/tumor", "cd206/cd20", "pd-l1/stroma", "cd163/pd-l1", 
+# "cd163/stroma", "cd68/nucleus", "cd20/tumor", "cd206/pd-l1", "nucleus/stroma", "cd20/pd-l1", "cd163/tumor", "cd206/cd68", "cd163/cd20", "tumor/stroma", "cd68/pd-l1", "cd206/nucleus", "cd68/cd163", "cd68/tumor"]
 
-# file1 = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
+# # file1 = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
 
-## Panel 2 Markers
-markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
+# ## Panel 2 Markers
+# markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
 
-directory1 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor"
-## Reads all files in the directory
-##    note, this is looking at the interface location
-ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor")
+# directory1 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor"
+# ## Reads all files in the directory
+# ##    note, this is looking at the interface location
+# ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor")
 
-for i in 1:2#size(ReadingFiles)[1]-4
-	filenametemp = ReadingFiles[i]
-	TumorTIMEPipeline(directory1, filenametemp, markerPanel, "Panel-2", "tumor")
-end
+# for i in 1:2#size(ReadingFiles)[1]-4
+# 	filenametemp = ReadingFiles[i]
+# 	TumorTIMEPipeline(directory1, filenametemp, markerPanel, "Panel-2", "tumor")
+# end
 
 # function ConcatFiles(directory)
 
