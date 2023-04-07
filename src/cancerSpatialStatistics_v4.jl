@@ -364,16 +364,16 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 		end
 		return result
 	end
-
     ## creates distribution based on interdistances calculated from slide information
     interdist_distr = MakeDistributions(interdist)
     println(interdist_distr)
 
-	interdist_distr2 = Dict{String,Vector{Float64}}()
-    for i in keys(interdist_distr)
-		interdist_distr[i]._bin_probmass
-		interdist_distr2[i] = interdist_distr[i]._bin_probmass
-	end
+	#OLD, Don't need this
+	# interdist_distr2 = Dict{String,Vector{Float64}}()
+    # for i in keys(interdist_distr)
+	# 	interdist_distr[i]._bin_probmass
+	# 	interdist_distr2[i] = interdist_distr[i]._bin_probmass
+	# end
 
     ##Creates distribution based on theoretical pdf equation
     ## add in theoretical PDF calculation here with range related to min and max of interdist in the sample
@@ -386,28 +386,19 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
     #creates a blank dictionary for the ranges of the interdistances at random distances
 	InterdistRanges = Dict{String,Vector{Float64}}()
     #creates a blank dictionary for the distribution of the ranges of the interdistances
-    TheoreticalPDFs = Dict{String,Vector{Float64}}()
-    for i in keys(interdist_distr2)
+    TheoreticalPDFs = Dict{String,AbstractVector}()
+    for i in keys(interdist_distr)
         #if !isempty(interdist[i])
-    		# min1= minimum(interdist[i])
-    		# println(min1)
-    		# max1= maximum(interdist[i])
-    		# println(max1)
-    		# size1=length(interdist[i])
-   			# println(size1)
-    		# incr1 = (max1-min1)/size1
-			# println(incr1)
-			# range1= collect(range(min1, max1, size1))
-			# InterdistRanges[i] = range1
-            ##rename(InterdistRanges, InterdistRanges[keys(interdist[i])]=>collect(keys(interdist)[i]))
             TheoreticalPDF = [];
-			for s in 1:length(interdist_distr2[i])
+			R = range(minimum(interdist[i]),maximum(interdist[i]),length=length(interdist[i]))
+			for s in R
                 # println("entered for loop")
-			    push!(TheoreticalPDF, nullpdf(interdist_distr2[i][s]))
+			    push!(TheoreticalPDF,[s,nullpdf(s)])
 			end
             TheoreticalPDFs[i]=TheoreticalPDF
 	end
-
+	#Plotting the nullpdf
+	#StatsPlots.scatter(hcat(TheoreticalPDFs["cd68/stroma"]...)[1,:],hcat(TheoreticalPDFs["cd68/stroma"]...)[2,:])
     directory2 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline"
 
     # #write merged theoretical ranges to a file 
@@ -417,6 +408,36 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
     #write merged theoretical PDFs to a file 
     @time CSV.write(string(directory2, "\\", splitname,".interdistances_PDFs",Dates.today(),".csv"), TheoreticalPDFs)
     println(string(splitname, " interdistance theoretical distributions have been saved to CSV"))
+
+	#calculate CDF from nullpdf using integration
+	TheoreticalCDFs = Dict{String,AbstractVector}()
+    for i in keys(interdist_distr)
+        #if !isempty(interdist[i])
+            TheoreticalCDF = [];
+			R = range(minimum(interdist[i]),maximum(interdist[i]),length=length(interdist[i]))
+			for s in R
+                # println("entered for loop")
+			    push!(TheoreticalCDF,[s,my_cdf(s)])
+			end
+            TheoreticalCDFs[i]=TheoreticalCDF
+	end
+
+	#Calculate CDF of empirical distribution
+	function MakeCDFs(data)
+		#Creates a CDF distribution for empirical data
+		#Creates a dictionary with distributions for each marker pair (non-empty)
+		result = Dict()
+		for (k,v) in data 
+			if !isempty(v)
+				Dist = ecdf(v) 
+				result[k] = Dist
+			end
+		end
+		return result
+	end
+    ## creates distribution based on interdistances calculated from slide information
+    interdist_CDF = MakeCDFs(interdist)
+    
 
 
 	function RunKSTest(dataEmp, dataNull, stats)
