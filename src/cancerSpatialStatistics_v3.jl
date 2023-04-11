@@ -15,7 +15,7 @@
 
 =#
 
-using CSV, DataFrames, Parameters, Statistics, StatsBase, HypothesisTests, Cairo, CairoMakie, Colors, Makie, Distributions, QuadGK, EmpiricalDistributions, Dates, Query, Missings;
+using CSV, DataFrames, Parameters, Statistics, StatsBase, HypothesisTests, Cairo, CairoMakie, Colors, Makie, Distributions, QuadGK, EmpiricalDistributions, Dates, Query, Missings, Distances;
 import Distributions: cdf
 # Used to split a tuple by components
 unzip(a) = map(x->getfield.(a, x), fieldnames(eltype(a)))
@@ -179,6 +179,8 @@ function nullpdf(r::Real)
 	return val
 end
 
+
+
 function my_cdf(r::Real)
 	I, _ = quadgk(nullpdf, 0, r)
 	return I
@@ -305,50 +307,32 @@ function main(user_par=nothing)
 
 	return df,interdist,intradist,inputfile
 
-
 end
 
 
-function TumorTIMEPipeline(file, marker, panelName, panelLoc) #, datadir::nothing, clindir::nothing, writedir::nothing)
+function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 
-	# file wants a string name of the file that has the single-cell measurements in it
-	# file = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
+	# # directory1 is a directory to pull files from 
 
-	# marker wants a vector of strings that are the markers in the panel
-	# marker = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
+    # # file wants a string name of the file that has the single-cell measurements in it
+	#file = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
 
-	# panelName wants a string that identifies which panel subfolder ("Panel-1" or "Panel-2") to use
-	# panelLoc wants a string that identifies which location folder (tumor, stroma, interface, normal) to use
+	#marker wants a vector of strings that are the markers in the panel
+	#marker = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
 
-	## TO ADD FUNCTINOALITY TO PIPELINE TO OTHER USERS
-	# datadir, clindir, and writedir is an optional entry that allows the user to input a directory location 
-	#   where the data is coming from, clinical information, and where the user want the results saved
+	#panelName wants a string that identifies which panel subfolder ("Panel-1" or "Panel-2") to use
+	#panelLoc wants a string that identifies which location folder (tumor, stroma, interface, normal) to use
 
-	## directories of note in this repository 
-	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
-	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
-
-	## if statements for adding additional functionality 
-		# if rawdatadirbase == nothing
-		# 	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
-		# end
-
-		# if clindir == nothing
-		# 	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
-		# end
-
-		# if writedir == nothing
-		# 	writedir = ""
-		# end
-
-	## identifies the patient name based on the SP number
-	## println(file)
+	# identifies the patient name based on the SP number
+	println(file)
 	indName = string(split(file,"_")[2])
+	
 
-	## identifies the patient name with the location on the slide
+	# ## identifies the patient name with the location on the slide
 	splitname = string(split(file,".")[1])
 
-	df, interdist, intradist, inputfile = main((inputfile=file,classifierLabels=marker,numPairCutoff=3,savePlots=false,saveData=false))
+
+	df, interdist, intradist, inputfile = main((inputfile=file,classifierLabels=marker,numPairCutoff=5,savePlots=false,saveData=false))
 
 	stats = [:mean,:median,:std,:var,:kurtosis,:skewness]
 	interdist_stats = Dict(k => NamedTuple(stat => eval(stat)(v) for stat in stats) for (k,v) in interdist if !isempty(v))
@@ -371,119 +355,175 @@ function TumorTIMEPipeline(file, marker, panelName, panelLoc) #, datadir::nothin
 		return result
 	end
 
-	function RunKSTest(data, stats)
-		kstests_col = DataFrame(ks_result = [], ks_p = [])
-		for (k,v) in data
-			if !isempty(v)
-				res = ExactOneSampleKSTest(v, customDist())
-				append!(kstests_col, DataFrame(ks_result=res.δ, ks_p = pvalue(res)))
+    ## creates distribution based on interdistances calculated from slide information
+    interdist_distr = MakeDistributions(interdist)
+    println(interdist_distr)
+
+    ##Creates distribution based on theoretical pdf equation
+    ## add in theoretical PDF calculation here with range related to min and max of interdist in the sample
+    
+	#NamesofInterdistP1=
+	NamesOfInterdistP2=["cd68/cd20", "nucleus/pd-l1", "cd20/stroma", "cd68/stroma", "nucleus/tumor", "cd163/nucleus", "cd20/nucleus", "cd206/stroma", "cd206/tumor", "cd206/cd163", "pd-l1/tumor", "cd206/cd20", "pd-l1/stroma", "cd163/pd-l1", 
+	"cd163/stroma", "cd68/nucleus", "cd20/tumor", "cd206/pd-l1", "nucleus/stroma", "cd20/pd-l1", "cd163/tumor", "cd206/cd68", "cd163/cd20", "tumor/stroma", "cd68/pd-l1", "cd206/nucleus", "cd68/cd163", "cd68/tumor"]
+   
+	InterdistRanges = Dict()
+    for i in eachindex(NamesOfInterdistP2)
+		if !isempty(interdist[NamesOfInterdistP2[i]])
+    		min1= minimum(interdist[NamesOfInterdistP2[i]])
+    		println(min1)
+    		max1= maximum(interdist[NamesOfInterdistP2[i]])
+    		println(max1)
+    		size1=length(interdist[NamesOfInterdistP2[i]])
+   			println(size1)
+    		incr1 = (max1-min1)/size1
+			println(incr1)
+			range1= collect(range(min1, max1, size1))
+			InterdistRanges[NamesOfInterdistP2[i]] = range1
+			for s in (InterdistRanges[NamesOfInterdistP2[i]])
+			TheoreticalPDF = nullpdf(s)
 			end
 		end
-		stats=hcat(stats,kstests_col)
-		return stats
 	end
-
-	KSResults = RunKSTest(interdist,interdist_stats_df)
-
-	function RunADTest(data, stats)
-		adtests_col = DataFrame(ad_result = [], ad_p = [])
-		for (k,v) in data
-			if !isempty(v)
-				res1 = OneSampleADTest(v, customDist())
-				append!(adtests_col, DataFrame(ad_result = res1.A², ad_p=(pvalue(res1))))
-			end
-		end
-		stats=hcat(stats,adtests_col)
-		return stats
-	end
-
-	ADResults=RunADTest(interdist,KSResults)
-
-	# add a column to statistics DF that has patient name 
-	ADResults[:,:patient] .= indName 
-
-	# write interdistance statistcs to a CSV file 
-	@time CSV.write(string(splitname,".interdistances_stats",Dates.today(),".csv"), ADResults)
-
-	# loading clinical information
-	println("INFO: Time to load clinical data ")
-	
-	rawdatadir = string(rawdatadirbase,"\\", panelName, "\\", panelLoc)
-	coltypes1 = Any[String for i=1:30]
-	coltypes1[4]=Union{Missing, String}   ## EGFR norm reads
-	coltypes1[5]=Union{Missing, String}   ## EGFR alpha reads
-	coltypes1[6]=Union{Missing, String}   ## EGFR beta reads
-	coltypes1[7]=Union{Missing, String}   ## EGFR gamma reads
-	coltypes1[10]=Float64    ## age at diagnosis
-	coltypes1[11]=Float64    ## age at surgery
-	coltypes1[14]=Int        ## grade
-	coltypes1[15]=Float64    ## size
-	coltypes1[22]=Union{Missing, String}   ## RFS
-	coltypes1[24]=Union{Missing, String}   ## CauseOfDeath
-	coltypes1[25]=Int        ## event of death
-	coltypes1[26]=Int 		 ## overall survival
-	coltypes1[27]=Union{Missing, Int}	   ## OS-IT
-	coltypes1[28]=Union{Missing, Int}	   ## OS-TT
-	coltypes1[29]=Union{Missing, Int}	   ## IMDC
-	coltypes1[30]=Union{Missing, String}   ## sutent neoadvant
-	
-	@time clinical_raw = CSV.read(string(clindir,"\\ccRCC-TIME-clinical-2022-09-27.csv"), DataFrame, header=1, types=coltypes1);
-	
-	# show(ADResults)
-	# show(clinical_raw)
-
-	joinkey(i) = (i.patient)
-
-	#println(joinkey(ADResults))
-	#println(joinkey(clinical_raw))
-
-	## !!!!!!!!!!!!!!!!!!!!!
-	## double check that all clinical variables are present 
-	@time DFFinal = @from i in ADResults begin
-		@join j in clinical_raw on joinkey(i) equals joinkey(j)
-		@select {i.patient, 
-				i.name, 
-				i.mean, 
-				i.median, 
-				i.std, i.var, 
-				i.kurtosis, i.skewness, i.ks_result, i.ks_p, 
-				i.ad_result, i.ad_p, 
-				EGFRnormReads=j.EGFRnormReads, 
-				EGFRalphaReads=j.EGFRalphaReads,
-				EGFRbetaReads=j.EGFRbetaReads,
-				EGFRgammaReads=j.EGFRgammaReads,
-				Gender=j.Gender, Race=j.Race, 
-				AgeDiagnosis=j.AgeDiagnosis, AgeSurgery=j.AgeSurgery, 
-				Histology=j.Histology, Laterality=j.Laterality, 
-				Grade=j.Grade, Size=j.Size, 
-				SarcomatoidStatus=j.SarcomatoidStatus, 
-				RhabdoidStatus=j.RhabdoidStatus, 
-				pT=j.pT, pN=j.pN, pM=j.pM, 
-				CytoreductiveSurgStatus=j.CytoreductiveSurg, 
-				RFS=j.RFS, OS=j.OverallSurvival, CauseOfDeath=j.CauseOfDeath, 
-				DeathStatus=j.EventDeath
-		}
-		@collect DataFrame;
-	end
-
-	# write merged statistics and clinical data for a single patient to a file 
-	@time CSV.write(string(splitname,".interdistances_stats+clin",Dates.today(),".csv"), DFFinal)
-	println(string(splitname, " interdistance statistics and clinical data has been saved to CSV"))
-
 end
+
+
+	# function RunCramerVonMisesTest(data,stats)
+	# 	CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
+	# 	for (k,v) in data
+	# 		if !isempty(v)
+	# 			res1 = 
+
+# 	function RunKSTest(dataEmp, dataNull, stats)
+#         ## dataEmp <DEFINE> 
+#         ## dataNull <DEFINE>
+#         ## stats is the dataframe with distribution statistcs that gets appended 
+
+# 		kstests_col = DataFrame(ks_result = [], ks_p = [])
+# 		for (k,v) in data
+# 			if !isempty(v)
+# 				res = ExactOneSampleKSTest(v, customDist())
+# 				append!(kstests_col, DataFrame(ks_result=res.δ, ks_p = pvalue(res)))
+# 			end
+# 		end
+# 		stats=hcat(stats,kstests_col)
+# 		return stats
+# 	end
+
+# 	KSResults = RunKSTest(interdist,interdist_stats_df)
+
+# 	# function RunADTest(data, stats)
+# 	# 	adtests_col = DataFrame(ad_result = [], ad_p = [])
+# 	# 	for (k,v) in data
+# 	# 		if !isempty(v)
+# 	# 			res1 = OneSampleADTest(v, customDist())
+# 	# 			append!(adtests_col, DataFrame(ad_result = res1.A², ad_p=(pvalue(res1))))
+# 	# 		end
+# 	# 	end
+# 	# 	stats=hcat(stats,adtests_col)
+# 	# 	return stats
+# 	# end
+
+# 	# ADResults=RunADTest(interdist,KSResults)
+
+# 	# add a column to statistics DF that has patient name 
+# 	KSResults[:,:patient] .= indName 
+
+# 	# write interdistance statistcs to a CSV file 
+# 	@time CSV.write(string(splitname,".interdistances_stats",Dates.today(),".csv"), KSResults)
+
+# 	coltypesS = Any[Float64 for i=1:35]
+# 	coltypesS[1]=String
+# 	coltypesS[2]=String
+
+# 	statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results and Analysis\\"
+# 	@time KSResults1 = CSV.read(string(statsdir,"All-Clinical-Data-for-Interdistances-at-Panel1-Tumor2022-10-27.csv"),DataFrame,types=coltypesS)
+# 	KSResults = KSResults1[:,1:12]
+
+# 	println(KSResults[1:5,:])
+
+# 	# loading clinical information
+# 	println("INFO: Time to load clinical data ")
+# 	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
+# 	rawdatadir = string(rawdatadirbase,"\\", panelName, "\\", panelLoc)
+# 	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data" 
+# 	coltypes1 = Any[String for i=1:30]
+# 	coltypes1[4]=Union{Missing, String}   ## EGFR norm reads
+# 	coltypes1[5]=Union{Missing, String}   ## EGFR alpha reads
+# 	coltypes1[6]=Union{Missing, String}   ## EGFR beta reads
+# 	coltypes1[7]=Union{Missing, String}   ## EGFR gamma reads
+# 	coltypes1[10]=Float64    ## age at diagnosis
+# 	coltypes1[11]=Float64    ## age at surgery
+# 	coltypes1[14]=Union{Missing, Int}        ## grade
+# 	coltypes1[15]=Float64    ## size
+# 	coltypes1[22]=Union{Missing, String}   ## RFS
+# 	coltypes1[24]=Union{Missing, String}   ## CauseOfDeath
+# 	coltypes1[25]=Int        ## event of death
+# 	coltypes1[26]=Int 		 ## overall survival
+# 	coltypes1[27]=Union{Missing, Float64}	   ## OS-IT
+# 	coltypes1[28]=Union{Missing, Float64}	   ## OS-TT
+# 	coltypes1[29]=Union{Missing, Float64}	   ## IMDC
+# 	coltypes1[30]=Union{Missing, String}   ## sutent neoadvant
+# 	@time clinical_raw = CSV.read(string(clindir,"\\ccRCC-TIME-clinical-2022-09-27.csv"), DataFrame, header=1, types=coltypes1);
+	
+# 	# show(ADResults)
+# 	# show(clinical_raw)
+
+# 	joinkey(i) = (i.patient)
+
+# 	#println(joinkey(KSResults))
+# 	#println(joinkey(clinical_raw))
+
+# 	## !!!!!!!!!!!!!!!!!!!!!
+# 	## double check that all clinical variables are present 
+# 	@time DFFinal = @from i in KSResults begin
+# 		@join j in clinical_raw on joinkey(i) equals joinkey(j)
+# 		@select {i.patient, 
+# 				i.name, 
+# 				i.mean, 
+# 				i.median, 
+# 				i.std, i.var, 
+# 				i.kurtosis, i.skewness, i.ks_result, i.ks_p, 
+# 				i.ad_result, i.ad_p, 
+# 				EGFRnormReads=j.EGFRnormReads, 
+# 				EGFRalphaReads=j.EGFRalphaReads,
+# 				EGFRbetaReads=j.EGFRbetaReads,
+# 				EGFRgammaReads=j.EGFRgammaReads,
+# 				Gender=j.Gender, Race=j.Race, 
+# 				AgeDiagnosis=j.AgeDiagnosis, AgeSurgery=j.AgeSurgery, 
+# 				Histology=j.Histology, Laterality=j.Laterality, 
+# 				Grade=j.Grade, Size=j.Size, 
+# 				SarcomatoidStatus=j.SarcomatoidStatus, 
+# 				RhabdoidStatus=j.RhabdoidStatus, 
+# 				pT=j.pT, pN=j.pN, pM=j.pM, 
+# 				CytoreductiveSurgStatus=j.CytoreductiveSurg, 
+# 				RFS=j.RFS, OS=j.OverallSurvival, CauseOfDeath=j.CauseOfDeath, 
+# 				DeathStatus=j.EventDeath
+# 		}
+# 		@collect DataFrame;
+# 	end
+
+# 	# write merged statistics and clinical data for a single patient to a file 
+# 	@time CSV.write(string(directory1, "\\", splitname,".interdistances_stats+clin",Dates.today(),".csv"), DFFinal)
+# 	println(string(splitname, " interdistance statistics and clinical data has been saved to CSV"))
+
+# end
+
+NamesOfInterdistP2=["cd68/cd20", "nucleus/pd-l1", "cd20/stroma", "cd68/stroma", "nucleus/tumor", "cd163/nucleus", "cd20/nucleus", "cd206/stroma", "cd206/tumor", "cd206/cd163", "pd-l1/tumor", "cd206/cd20", "pd-l1/stroma", "cd163/pd-l1", 
+"cd163/stroma", "cd68/nucleus", "cd20/tumor", "cd206/pd-l1", "nucleus/stroma", "cd20/pd-l1", "cd163/tumor", "cd206/cd68", "cd163/cd20", "tumor/stroma", "cd68/pd-l1", "cd206/nucleus", "cd68/cd163", "cd68/tumor"]
 
 # file1 = "P1a_SP04-4722_[37094,12061].tif_94266_job58256.object_results.csv"
 
 ## Panel 2 Markers
 markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
 
+directory1 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor"
 ## Reads all files in the directory
 ##    note, this is looking at the interface location
 ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor")
 
-for i in 1:size(ReadingFiles)[1]
+for i in 1:2 #size(ReadingFiles)[1]-4
 	filenametemp = ReadingFiles[i]
-	TumorTIMEPipeline(filenametemp, markerPanel, "Panel-2", "tumor")
+	TumorTIMEPipeline(directory1, filenametemp, markerPanel, "Panel-2", "tumor")
 end
 
 # function ConcatFiles(directory)
@@ -492,7 +532,7 @@ end
 # 	ReadingFiles2 = readdir(directory)
 # 	println(ReadingFiles2)
 
-# 	coltypesL = Any[Float64 for i=1:34]
+# 	coltypesL = Any[String for i=1:34]
 # 	coltypesL[1]=String
 # 	coltypesL[2]=String
 # 	coltypesL[13]=Union{Missing, String}
@@ -501,9 +541,12 @@ end
 # 	coltypesL[16]=Union{Missing, String}
 # 	coltypesL[17]=String
 # 	coltypesL[18]=String
+# 	coltypesL[19]=String
+# 	coltypesL[20]=String
 # 	coltypesL[21]=String
 # 	coltypesL[22]=String
-# 	coltypesL[23]=Union{Missing, Int}
+# 	coltypesL[23]= Union{Missing, Float64}
+# 	coltypesL[24]=Union{Missing, Float64}
 # 	coltypesL[25]=String
 # 	coltypesL[26]=String
 # 	coltypesL[27]=String
@@ -519,12 +562,12 @@ end
 # 	println(longDF)
 
 # 	#Create for loop that runs through files of stats and clincial data 
-# 	for i in 2:size(ReadingFiles2)[1]-4
+# 	for i in 2:size(ReadingFiles2)[1]-1
 # 		filenametemp2 = ReadingFiles2[i]
 # 		println(filenametemp2)
 
 # 		#tmpdf = CSV.read(string(directory,"\\",ReadingFiles2[i]), DataFrame, header=1, types=Dict(:col31=>Union{Missing,Int,String}, :col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int))
-# 		coltypes = Any[Float64 for i=1:34]
+# 		coltypes = Any[String for i=1:34]
 # 		coltypes[1]=String
 # 		coltypes[2]=String
 # 		coltypes[13]=Union{Missing, String}
@@ -533,9 +576,12 @@ end
 # 		coltypes[16]=Union{Missing, String}
 # 		coltypes[17]=String
 # 		coltypes[18]=String
+# 		coltypesL[19]=String
+# 		coltypesL[20]=String
 # 		coltypes[21]=String
 # 		coltypes[22]=String
-# 		coltypes[23]=Union{Missing, Int}
+# 		coltypes[23]=Union{Missing, Float64}
+# 		coltypes[24]=Union{Missing, Float64}
 # 		coltypes[25]=String
 # 		coltypes[26]=String
 # 		coltypes[27]=String
@@ -551,12 +597,11 @@ end
 # 	end
 
 # 	# write out CSV of full dataframe --- longDF
-# 	@time CSV.write(string("All-Clinical-Data-for-Interdistances-at-Panel1-Tumor",Dates.today(),".csv"), longDF)
+# 	@time CSV.write(string(directory1,"\\All-Clinical-Data-for-Interdistances-at-Panel2-Tumor",Dates.today(),".csv"), longDF)
 
 # 	# Query to identify individual pairs and then save those as files 
 # 	#Loop over each of the different names
 # 	listNames = unique(longDF[:,:name])
-# 	println(typeof(listNames))
 
 # 	for n in 1:length(listNames)
 # 		Query1= @from i in longDF begin
@@ -565,7 +610,7 @@ end
 # 			@collect DataFrame
 # 		end
 # 		replace(listNames[n], "/" => "+") 
-# 		@time CSV.write(string("Query for ", replace(listNames[n], "/" => "+"), Dates.today(),".csv"), Query1)
+# 		@time CSV.write(string(directory1,"\\","Query for ", replace(listNames[n], "/" => "+"), Dates.today(),".csv"), Query1)
 # 	end
 
 
@@ -573,14 +618,14 @@ end
 
 # end
 
-# individdir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\tumor\\Results from Pipeline\\"
+# individdir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-1\\tumor\\Results from Pipeline\\_CutOff3\\"
 # #individdir2="C:\\Users\\camara.casson\\OneDrive - University of Florida\\Desktop\\TumorTIME\\src"
 # ConcatFiles(individdir)
 
 
 
 
-#plotting method?
-# histogram([data for data in dist if length(data)>50],normalize=:pdf,bins=:scott)
+# #plotting method?
+# # histogram([data for data in dist if length(data)>50],normalize=:pdf,bins=:scott)
 
-# plot([data for data in intradist if length(data)>50],normalize=:pdf,bins=:sturges,layout=(3,1),label=nothing,seriestype=:barhist,xrotation=45,xtickfontsize=6,ytickfontsize=6,seriescolor=[:green :red :blue])
+# # plot([data for data in intradist if length(data)>50],normalize=:pdf,bins=:sturges,layout=(3,1),label=nothing,seriestype=:barhist,xrotation=45,xtickfontsize=6,ytickfontsize=6,seriescolor=[:green :red :blue])
