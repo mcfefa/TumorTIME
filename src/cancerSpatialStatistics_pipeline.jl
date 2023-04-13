@@ -442,10 +442,9 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 	EmpiricalCDFs = Dict{String,AbstractVector}()
     for i in keys(interdist_distr)
             EmpiricalCDF = [];
-			R = interdist[i]
-			for s in R
+			for s in 1:length(interdist_CDF[i].sorted_values)
                 # println("entered for loop")
-			    push!(EmpiricalCDF,[interdist[i],interdist_CDF[i].sorted_values])
+			    push!(EmpiricalCDF,[interdist[i][s],interdist_CDF[i].sorted_values[s]])
 			end
             EmpiricalCDFs[i]=EmpiricalCDF
 	end
