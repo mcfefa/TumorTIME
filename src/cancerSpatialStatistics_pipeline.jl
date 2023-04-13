@@ -421,6 +421,7 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 			end
             TheoreticalCDFs[i]=TheoreticalCDF
 	end
+#StatsPlots.scatter(hcat(TheoreticalCDFs["cd68/stroma"]...)[1,:],hcat(TheoreticalCDFs["cd68/stroma"]...)[2,:])
 
 	#Calculate CDF of empirical distribution
 	function MakeCDFs(data)
@@ -438,7 +439,18 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
     ## creates distribution based on interdistances calculated from slide information
     interdist_CDF = MakeCDFs(interdist)
     
-
+	EmpiricalCDFs = Dict{String,AbstractVector}()
+    for i in keys(interdist_distr)
+            EmpiricalCDF = [];
+			R = interdist[i]
+			for s in R
+                # println("entered for loop")
+			    push!(EmpiricalCDF,[interdist[i],interdist_CDF[i].sorted_values])
+			end
+            EmpiricalCDFs[i]=EmpiricalCDF
+	end
+	#StatsPlots.scatter(hcat(EmpiricalCDFs["cd68/stroma"]...)[1,:],hcat(EmpiricalCDFs["cd68/stroma"]...)[2,:])
+	
 
 	function RunKSTest(dataEmp, dataNull, stats)
         ## dataEmp is the empirical data with the made distributions found in interdist_distr
@@ -447,8 +459,7 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 
 		kstests_col = DataFrame(ks_result = [], ks_p = [])
 		for i in keys(dataNull) 
-			dist = fit(DiscreteNonParametric,dataNull[i])
-			res = ExactOneSampleKSTest(dataEmp[i],dist)
+			res = ExactOneSampleKSTest(dataEmp[i],dataNull[i])
 			append!(kstests_col, DataFrame(ks_result=res.δ, ks_p = pvalue(res)))
 		end
 
@@ -458,19 +469,18 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 
 	KSResults = RunKSTest(interdist_distr2,TheoreticalPDFs,interdist_stats_df)
  
-	# function RunADTest(dataEmp, dataNull, stats)
-	# 	adtests_col = DataFrame(ad_result = [], ad_p = [])
-	# 	for i in keys(dataNull)
-	# 		dist2 = fit(DiscreteNonParametric,dataNull[i])
-	# 		res1 = OneSampleADTest(dataEmp[i], dist2)
-	# 		append!(adtests_col, DataFrame(ad_result = res1.A², ad_p=(pvalue(res1))))
-	# 	end
+	function RunADTest(dataEmp, dataNull, stats)
+		adtests_col = DataFrame(ad_result = [], ad_p = [])
+		for i in keys(dataNull)
+			res1 = OneSampleADTest(dataEmp[i], dataNull[i])
+			append!(adtests_col, DataFrame(ad_result = res1.A², ad_p=(pvalue(res1))))
+		end
 		
-	# 	stats=hcat(stats,adtests_col)
-	# 	return stats
-	# end
+		stats=hcat(stats,adtests_col)
+		return stats
+	end
 
-	# ADResults=RunADTest(interdist_distr2,TheoreticalPDFs,KSResults)
+	 ADResults=RunADTest(interdist_distr2,TheoreticalPDFs,KSResults)
 
 	# function RunCramerVonMisesTest(dataEmp, dataNull, stats)
 	# 	CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
