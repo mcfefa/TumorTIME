@@ -439,12 +439,15 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
     ## creates distribution based on interdistances calculated from slide information
     interdist_CDF = MakeCDFs(interdist)
     
+	
 	EmpiricalCDFs = Dict{String,AbstractVector}()
     for i in keys(interdist_distr)
             EmpiricalCDF = [];
+			Interdist_Sort = sort(interdist[i])
+			#println("Show Interdist_Sort")
 			for s in 1:length(interdist_CDF[i].sorted_values)
                 # println("entered for loop")
-			    push!(EmpiricalCDF,[interdist[i][s],interdist_CDF[i].sorted_values[s]])
+			    push!(EmpiricalCDF,[Interdist_Sort[s],interdist_CDF[i](Interdist_Sort[s])])
 			end
             EmpiricalCDFs[i]=EmpiricalCDF
 	end
@@ -452,22 +455,25 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 	
 
 	function RunKSTest(dataEmp, dataNull, stats)
-        ## dataEmp is the empirical data with the made distributions found in interdist_distr
-        ## dataNull the theoretical distribution found inside TheoreticalPDFs
+        ## dataEmp is the empirical data with the made distributions found in EmpiricalCDFs
+        ## dataNull the theoretical distribution found inside TheoreticalCDFs
         ## stats is the dataframe with distribution statistcs that gets appended 
 
 		kstests_col = DataFrame(ks_result = [], ks_p = [])
 		for i in keys(dataNull) 
-			res = ExactOneSampleKSTest(dataEmp[i],dataNull[i])
-			append!(kstests_col, DataFrame(ks_result=res.δ, ks_p = pvalue(res)))
+			for s in 1:length(dataNull[i])
+				res = ExactOneSampleKSTest(dataEmp[i][s],dataNull[i][s])
+				append!(kstests_col, DataFrame(ks_result=res.δ, ks_p = pvalue(res)))
+			end
 		end
 
 		stats=hcat(stats,kstests_col)
 		return stats
 	end
 
-	KSResults = RunKSTest(interdist_distr2,TheoreticalPDFs,interdist_stats_df)
- 
+	KSResults = RunKSTest(EmpiricalCDFs,TheoreticalCDFs,interdist_stats_df)
+	display(KSResults)
+
 	function RunADTest(dataEmp, dataNull, stats)
 		adtests_col = DataFrame(ad_result = [], ad_p = [])
 		for i in keys(dataNull)
@@ -479,7 +485,7 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 		return stats
 	end
 
-	 ADResults=RunADTest(interdist_distr2,TheoreticalPDFs,KSResults)
+	 ADResults=RunADTest(EmpiricalCDFs,TheoreticalCDFs,KSResults)
 
 	# function RunCramerVonMisesTest(dataEmp, dataNull, stats)
 	# 	CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
