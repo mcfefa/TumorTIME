@@ -462,11 +462,11 @@ function TumorTIMEPipeline(directory1, file, marker, panelName, panelLoc)
 		kstests_col = DataFrame(ks_result = [], ks_p = [])
 		for i in keys(dataNull) 
 			for s in 1:length(dataNull[i])
-				x1 = reduce(vcat, [t[1] for t in dataEmp])
-				x2 = reduce(vcat, [t[1] for t in dataNull])
-				y1 = reduce(vcat, [t[2] for t in dataEmp])
-				y2 =  reduce(vcat, [t[2] for t in dataNull])
-				res = ExactOneSampleKSTest([x1,y1],[x2,y2])
+				x1 = vcat([s[1] for i in dataEmp])
+				x2 = vcat([s[1] for i in dataNull])
+				y1 = vcat([s[2] for i in dataEmp])
+				y2 = vcat([s[2] for i in dataNull])
+				res = ExactOneSampleKSTest(x1,y1,x2,y2)#(dataEmp[i],dataNull[i],Any,Any) #(dataEmp[i][s][1], dataEmp[i][s][2],dataNull[i][s][1], dataNull[i][s][2]) #[x1,y1],[x2,y2]
 				append!(kstests_col, DataFrame(ks_result=res.δ, ks_p = pvalue(res)))
 			end
 		end
