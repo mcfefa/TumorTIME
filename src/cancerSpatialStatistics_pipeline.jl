@@ -1167,7 +1167,7 @@ function ConcatFiles_Intra(directory)
 
 		append!(longDF,tmpdf)
 	end
-	directory7 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results and Analysis\\Panel2-Tumor-Cutoff5\\intradist\\"
+	directory7 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\intradist\\"
 	# write out CSV of full dataframe --- longDF
 	@time CSV.write(string(directory4,"\\All-Clinical-Data-for-Intradistances-at-Panel2-Tumor",Dates.today(),".csv"), longDF)
 
@@ -1191,8 +1191,43 @@ function ConcatFiles_Intra(directory)
  ConcatFiles2(directory6)
 
 function RunStatistics_Inter(directory)
+	QueryDirectory = directory
+	JuliaStatsDir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\interdist\\Julia-Stats"
+	ReadingFiles3 = readdir(directory)
+    println(ReadingFiles3)
 
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            
+            # Convert the "Gender" column to lowercase
+            query_file.Gender = lowercase.(query_file.Gender)
+            
+            selected_columns = select(query_file, :ks_result, :Gender)
+            grouped_data = groupby(selected_columns, :Gender)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+
+			result = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test = pvalue(result)
+			println(pvalue_test)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF = n1+n2-2
+			println(DoF)
+			test_info = DataFrame(ks_result = pvalue_test, Gender = DoF)
+			Test_Info = vcat(grouped_data_DataFrame, test_info)
+
+			@time CSV.write(string(JuliaStatsDir,"\\","Statistical Test of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
+		end
+	end
 end
+
+directory8 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\interdist"
+RunStatistics_Inter(directory8)
 
 # #plotting method?
 # # histogram([data for data in dist if length(data)>50],normalize=:pdf,bins=:scott)
