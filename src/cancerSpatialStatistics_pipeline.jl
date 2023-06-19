@@ -553,7 +553,7 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
  	coltypesS[1]=String
  	coltypesS[2]=String
 
-	statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results and Analysis\\"
+	statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\"
 	@time JSResults1 = CSV.read(string(statsdir,"All-Clinical-Data-for-Interdistances-at-Panel1-Tumor2022-10-27.csv"),DataFrame,types=coltypesS)
 	JSResults = JSResults1[:,1:12]
 
@@ -622,7 +622,7 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
 
 	directory3 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results-from-Pipeline\\_CutOff5\\interdist"
 	# write merged statistics and clinical data for a single patient to a file 
-	@time CSV.write(string(directory1, "\\", splitname,".interdistances_stats+clin",Dates.today(),".csv"), DFFinal)
+	@time CSV.write(string(directory3, "\\", splitname,".interdistances_stats+clin",Dates.today(),".csv"), DFFinal)
 	println(string(splitname, " interdistance statistics and clinical data has been saved to CSV"))
 
 end
@@ -638,85 +638,85 @@ markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
 directory1 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor"
 ## Reads all files in the directory
 ##    note, this is looking at the interface location
-ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor")
+ReadingFiles = readdir(directory1)
 
 for i in 1:2#size(ReadingFiles)[1]-4
 	filenametemp = ReadingFiles[i]
 	TumorTIMEPipeline(directory1, filenametemp, markerPanel, "Panel-2", "tumor")
 end
 
-function ConcatFiles1(directory)
+function ConcatFiles_Inter(directory)
 
 	#Read files in results from pipeline folder  
 	ReadingFiles2 = readdir(directory)
 	println(ReadingFiles2)
 
-# 	coltypesL = Any[String for i=1:35]
-# 	coltypesL[1]=String
-# 	coltypesL[2]=String
-# 	coltypesL[14]=Union{Missing, String}
-# 	coltypesL[15]=Union{Missing, String}
-# 	coltypesL[16]=Union{Missing, String}
-# 	coltypesL[17]=Union{Missing, String}
-# 	coltypesL[18]=String
-# 	coltypesL[19]=String
-# 	coltypesL[20]=String
-# 	coltypesL[21]=String
-# 	coltypesL[22]=String
-# 	coltypesL[23]=String
-# 	coltypesL[24]= Union{Missing, Float64}
-# 	coltypesL[25]=Union{Missing, Float64}
-# 	coltypesL[26]=String
-# 	coltypesL[27]=String
-# 	coltypesL[28]=String
-# 	coltypesL[29]=Union{Missing, String}
-# 	coltypesL[30]=String
-# 	coltypesL[31]=String
-# 	coltypesL[32]=Union{Missing, String}
-# 	coltypesL[34]=Union{Missing, String}
-# 	longDF = CSV.read(string(directory,"\\",ReadingFiles2[1]), DataFrame, header=1, types=coltypesL)#Dict(:col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int, :col31=>Union{Missing,Int,String}))
-# 	# add a column to individual patient and loc DF that has the filename to be able to pull out location later if needed
-# 	longDF[:,:filename] .= ReadingFiles2[1] 
+ 	coltypesL = Any[String for i=1:35]
+ 	coltypesL[1]=String
+ 	coltypesL[2]=String
+ 	coltypesL[14]=Union{Missing, String}
+ 	coltypesL[15]=Union{Missing, String}
+ 	coltypesL[16]=Union{Missing, String}
+ 	coltypesL[17]=Union{Missing, String}
+ 	coltypesL[18]=String
+ 	coltypesL[19]=String
+ 	coltypesL[20]=String
+ 	coltypesL[21]=String
+ 	coltypesL[22]=String
+ 	coltypesL[23]=String
+ 	coltypesL[24]= Union{Missing, Float64}
+ 	coltypesL[25]=Union{Missing, Float64}
+ 	coltypesL[26]=String
+ 	coltypesL[27]=String
+ 	coltypesL[28]=String
+ 	coltypesL[29]=Union{Missing, String}
+ 	coltypesL[30]=String
+ 	coltypesL[31]=String
+ 	coltypesL[32]=Union{Missing, String}
+ 	coltypesL[34]=Union{Missing, String}
+ 	longDF = CSV.read(string(directory,"\\",ReadingFiles2[1]), DataFrame, header=1, types=coltypesL)#Dict(:col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int, :col31=>Union{Missing,Int,String}))
+ 	# add a column to individual patient and loc DF that has the filename to be able to pull out location later if needed
+ 	longDF[:,:filename] .= ReadingFiles2[1] 
 
 	#println(names(longDF)[31])
 	println(longDF)
 
-# 	#Create for loop that runs through files of stats and clincial data 
-# 	for i in 1:size(ReadingFiles2)[1]-1
-# 		filenametemp2 = ReadingFiles2[i]
-# 		println(filenametemp2)
+ 	#Create for loop that runs through files of stats and clincial data 
+ 	for i in 1:size(ReadingFiles2)[1]-1
+ 		filenametemp2 = ReadingFiles2[i]
+ 		println(filenametemp2)
 
-# 		#tmpdf = CSV.read(string(directory,"\\",ReadingFiles2[i]), DataFrame, header=1, types=Dict(:col31=>Union{Missing,Int,String}, :col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int))
-# 		coltypes = Any[String for i=1:35]
-# 		coltypes[1]=String
-# 		coltypes[2]=String
-# 		coltypes[14]=Union{Missing, String}
-# 		coltypes[15]=Union{Missing, String}
-# 		coltypes[16]=Union{Missing, String}
-# 		coltypes[17]=Union{Missing, String}
-# 		coltypes[18]=String
-# 		coltypes[19]=String
-# 		coltypesL[20]=String
-# 		coltypesL[21]=String
-# 		coltypes[22]=String
-# 		coltypes[23]=String
-# 		coltypes[24]=Union{Missing, Float64}
-# 		coltypes[25]=Union{Missing, Float64}
-# 		coltypes[26]=String
-# 		coltypes[27]=String
-# 		coltypes[28]=String
-# 		coltypes[29]=Union{Missing, String}
-# 		coltypes[30]=String
-# 		coltypes[31]=String
-# 		coltypes[32]=Union{Missing, String}
-# 		coltypes[34]=Union{Missing, String}
-# 		#tmpdf = CSV.read(string(directory,"\\",filenametemp2), DataFrame, header=1, types=Dict(:col31=>Union{Missing,String}, :col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int))
-# 		tmpdf = CSV.read(string(directory,"\\",filenametemp2), DataFrame, header=1, types=coltypes)
-# 		tmpdf[:,:filename] .= ReadingFiles2[i] 
+ 		#tmpdf = CSV.read(string(directory,"\\",ReadingFiles2[i]), DataFrame, header=1, types=Dict(:col31=>Union{Missing,Int,String}, :col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int))
+ 		coltypes = Any[String for i=1:35]
+ 		coltypes[1]=String
+ 		coltypes[2]=String
+ 		coltypes[14]=Union{Missing, String}
+ 		coltypes[15]=Union{Missing, String}
+ 		coltypes[16]=Union{Missing, String}
+ 		coltypes[17]=Union{Missing, String}
+ 		coltypes[18]=String
+ 		coltypes[19]=String
+ 		coltypesL[20]=String
+ 		coltypesL[21]=String
+ 		coltypes[22]=String
+ 		coltypes[23]=String
+ 		coltypes[24]=Union{Missing, Float64}
+ 		coltypes[25]=Union{Missing, Float64}
+ 		coltypes[26]=String
+ 		coltypes[27]=String
+ 		coltypes[28]=String
+ 		coltypes[29]=Union{Missing, String}
+ 		coltypes[30]=String
+ 		coltypes[31]=String
+ 		coltypes[32]=Union{Missing, String}
+ 		coltypes[34]=Union{Missing, String}
+ 		#tmpdf = CSV.read(string(directory,"\\",filenametemp2), DataFrame, header=1, types=Dict(:col31=>Union{Missing,String}, :col13=>Int, :col14=>Int, :col15=>Int, :col16=>Int, :col23=>Int))
+ 		tmpdf = CSV.read(string(directory,"\\",filenametemp2), DataFrame, header=1, types=coltypes)
+ 		tmpdf[:,:filename] .= ReadingFiles2[i] 
 
 		append!(longDF,tmpdf)
 	end
-	directory4 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\interdist\\"
+	directory4 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\"
 	# write out CSV of full dataframe --- longDF
 	@time CSV.write(string(directory4,"\\All-Clinical-Data-for-Interdistances-at-Panel2-Tumor",Dates.today(),".csv"), longDF)
 
@@ -724,20 +724,21 @@ function ConcatFiles1(directory)
 	#Loop over each of the different names
 	listNames = unique(longDF[:,:name])
 
-# 	for n in 1:length(listNames)
-# 		Query1= @from i in longDF begin
-# 			@where i.name == listNames[n]
-# 			@select i #{pair=i.name, i.filename}
-# 			@collect DataFrame
-# 		end
-# 		replace(listNames[n], "/" => "+") 
-# 		@time CSV.write(string(directory4,"\\","Query for (interdist)", replace(listNames[n], "/" => "+"), Dates.today(),".csv"), Query1)
-# 	end
-#  end
+	directory5 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\interdist\\"
+ 	for n in 1:length(listNames)
+ 		Query1= @from i in longDF begin
+ 			@where i.name == listNames[n]
+ 			@select i #{pair=i.name, i.filename}
+ 			@collect DataFrame
+ 		end
+ 		replace(listNames[n], "/" => "+") 
+ 		@time CSV.write(string(directory5,"\\","Query for (interdist)", replace(listNames[n], "/" => "+"), Dates.today(),".csv"), Query1)
+ 	end
+  end
 
-#  individdir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline\\_CutOff5\\interdist\\"
-# # #individdir2="C:\\Users\\camara.casson\\OneDrive - University of Florida\\Desktop\\TumorTIME\\src"
-#  ConcatFiles1(individdir)
+  #individdir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline\\_CutOff5\\interdist\\"
+ # #individdir2="C:\\Users\\camara.casson\\OneDrive - University of Florida\\Desktop\\TumorTIME\\src"
+  ConcatFiles1(directory3)
 
 
  function TumorTIMEPipeline_Intra(directory1, file, marker, panelName, panelLoc)
@@ -832,7 +833,7 @@ function ConcatFiles1(directory)
 	end
 	#Plotting the nullpdf
 	#StatsPlots.scatter(hcat(TheoreticalPDFs["cd68/stroma"]...)[1,:],hcat(TheoreticalPDFs["cd68/stroma"]...)[2,:])
-    directory2 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline"
+    directory2 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results-from-Pipeline"
 
     # #write merged theoretical ranges to a file 
  	# @time CSV.write(string(directory2, "\\", splitname,".interdistances_ranges",Dates.today(),".csv"), InterdistRanges)
@@ -995,7 +996,7 @@ function ConcatFiles1(directory)
  	JSResults[:,:patient] .= indName 
 
   	# write interdistance statistcs to a CSV file 
-	  statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results and Analysis\\Panel2-Tumor-Cutoff5\\stats\\"
+	  statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\stats\\"
 	  @time CSV.write(string(statsdir, "\\", splitname,".intradistances_stats",Dates.today(),".csv"), JSResults)
 
 	coltypesS = Any[Float64 for i=1:35]
@@ -1012,7 +1013,7 @@ function ConcatFiles1(directory)
 	println("INFO: Time to load clinical data ")
 	rawdatadirbase = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data"
 	rawdatadir = string(rawdatadirbase,"\\", panelName, "\\", panelLoc)
-	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline\\_CutOff5\\Stats" 
+	clindir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results-from-Pipeline\\_CutOff5\\Stats" 
 	coltypes1 = Any[String for i=1:30]
 	coltypes1[4]=Union{Missing, String}   ## EGFR norm reads
 	coltypes1[5]=Union{Missing, String}   ## EGFR alpha reads
@@ -1070,9 +1071,9 @@ function ConcatFiles1(directory)
 		@collect DataFrame;
 	end
 
-	directory3 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline\\_Cutoff5\\intradist"
+	directory6 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results-from-Pipeline\\_Cutoff5\\intradist"
 	# write merged statistics and clinical data for a single patient to a file 
-	@time CSV.write(string(directory3, "\\", splitname,".intradistances_stats+clin",Dates.today(),".csv"), DFFinal)
+	@time CSV.write(string(directory6, "\\", splitname,".intradistances_stats+clin",Dates.today(),".csv"), DFFinal)
 	println(string(splitname, " intradistance statistics and clinical data has been saved to CSV"))
 
 end
@@ -1088,14 +1089,14 @@ markerPanel = ["tumor","stroma","CD68","CD163","CD206","PD-L1"]
 directory1 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor"
 ## Reads all files in the directory
 ##    note, this is looking at the interface location
-ReadingFiles = readdir("C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor")
+ReadingFiles = readdir(directory1)
 
 for i in 1:size(ReadingFiles)[1]-4
 	filenametemp = ReadingFiles[i]
 	TumorTIMEPipeline_Intra(directory1, filenametemp, markerPanel, "Panel-2", "tumor")
 end
 
-function ConcatFiles2(directory)
+function ConcatFiles_Intra(directory)
 
 	#Read files in results from pipeline folder  
 	ReadingFiles2 = readdir(directory)
@@ -1166,7 +1167,7 @@ function ConcatFiles2(directory)
 
 		append!(longDF,tmpdf)
 	end
-	directory5 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results and Analysis\\Panel2-Tumor-Cutoff5\\intradist\\"
+	directory7 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results and Analysis\\Panel2-Tumor-Cutoff5\\intradist\\"
 	# write out CSV of full dataframe --- longDF
 	@time CSV.write(string(directory4,"\\All-Clinical-Data-for-Intradistances-at-Panel2-Tumor",Dates.today(),".csv"), longDF)
 
@@ -1181,13 +1182,13 @@ function ConcatFiles2(directory)
 			@collect DataFrame
 		end
 		replace(listNames[n], "/" => "+") 
-		@time CSV.write(string(directory5,"\\","Query for (intradist)", replace(listNames[n], "/" => "+"), Dates.today(),".csv"), Query1)
+		@time CSV.write(string(directory7,"\\","Query for (intradist)", replace(listNames[n], "/" => "+"), Dates.today(),".csv"), Query1)
 	end
  end
 
- individdir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline\\_Cutoff5\\intradist\\"
+ #individdir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\data\\Panel-2\\tumor\\Results from Pipeline\\_Cutoff5\\intradist\\"
 # #individdir2="C:\\Users\\camara.casson\\OneDrive - University of Florida\\Desktop\\TumorTIME\\src"
- ConcatFiles2(individdir)
+ ConcatFiles2(directory6)
 
 function RunStatistics_Inter(directory)
 
