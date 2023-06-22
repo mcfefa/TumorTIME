@@ -1211,23 +1211,31 @@ function RunStatistics_Inter(directory)
 			grouped_data_DataFrame = DataFrame(grouped_data)
 			println(grouped_data_DataFrame)
 
-			result = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
-			pvalue_test = pvalue(result)
-			println(pvalue_test)
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
 			n1=length(grouped_data[1][!,1])
 			n2 = length(grouped_data[2][!,1])
 			DoF = n1+n2-2
 			println(DoF)
-			test_info = DataFrame(ks_result = pvalue_test, Gender = DoF)
+			test_info = DataFrame(ks_result = pvalue_test1, Gender = DoF)
 			Test_Info = vcat(grouped_data_DataFrame, test_info)
-
-			@time CSV.write(string(JuliaStatsDir,"\\","Statistical Test of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
+			#@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
+			
+			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			testinfo = DataFrame(ks_result = pvalue_test2, Gender = ~)
+			TestInfo = vcat(grouped_data_DataFrame, testinfo)
+			println(TestInfo)
+			#@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
 		end
 	end
 end
 
 directory8 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\interdist"
 RunStatistics_Inter(directory8)
+
 
 # #plotting method?
 # # histogram([data for data in dist if length(data)>50],normalize=:pdf,bins=:scott)
