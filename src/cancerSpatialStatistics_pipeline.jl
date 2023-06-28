@@ -1196,6 +1196,7 @@ function RunStatistics_Inter(directory)
 	ReadingFiles3 = readdir(directory)
     println(ReadingFiles3)
 
+	# for loop 1
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1232,6 +1233,7 @@ function RunStatistics_Inter(directory)
 		end
 	end
 
+	#for loop 2
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1268,6 +1270,7 @@ function RunStatistics_Inter(directory)
 		end
 	end
 
+		#for loop 3
 		for file in ReadingFiles3
 			if occursin(".csv", file)
 				filepath = joinpath(directory, file)
@@ -1308,6 +1311,7 @@ function RunStatistics_Inter(directory)
 			end
 	end
 
+	#for loop 4
 	for file in ReadingFiles3
 		if occursin(".csv", file)
 			filepath = joinpath(directory, file)
@@ -1348,6 +1352,7 @@ function RunStatistics_Inter(directory)
 		end
 	end
 
+	#for loop 5
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1367,10 +1372,12 @@ function RunStatistics_Inter(directory)
 				if length(selected_columns[!,1]) == length(selected_columns[!,2])
 					pvalue = 2 * ccdf(Normal(), atanh(abs(cor(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
 					println(pvalue)
+					test_info = DataFrame(ks_result = correlation1, AgeDiagnosis = pvalue)
+					Test_Info = vcat(selected_columns, test_info)
+					#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Age at Diagnosis on ", file, Dates.today(),".csv"), Test_Info)
 				else
 					error("x and y have different lengths")
 				end
-			#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
 			
 			result2 = StatsBase.corspearman(selected_columns[!,1],selected_columns[!,2])
 			correlation2 = result2
@@ -1378,13 +1385,16 @@ function RunStatistics_Inter(directory)
 				if length(selected_columns[!,1]) == length(selected_columns[!,2])
 					pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
 					println(pvalue)
+					testinfo = DataFrame(ks_result = correlation2, AgeDiagnosis = pvalue)
+					TestInfo = vcat(selected_columns, testinfo)
+					#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Age at Diagnosis on ", file, Dates.today(),".csv"), TestInfo)
 				else
 					error("x and y have different lengths")
 				end
-			#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
 		end
 	end
 
+	#for loop 6 
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1404,10 +1414,13 @@ function RunStatistics_Inter(directory)
 				if length(selected_columns[!,1]) == length(selected_columns[!,2])
 					pvalue = 2 * ccdf(Normal(), atanh(abs(cor(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
 					println(pvalue)
+					test_info = DataFrame(cbs_result = correlation1, AgeDiagnosis = pvalue)
+					Test_Info = vcat(selected_columns, test_info)
+					#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and Age at Diagnosis on ", file, Dates.today(),".csv"), Test_Info)
+
 				else
 					error("x and y have different lengths")
 				end
-			#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
 			
 			result2 = StatsBase.corspearman(selected_columns[!,1],selected_columns[!,2])
 			correlation2 = result2
@@ -1415,13 +1428,16 @@ function RunStatistics_Inter(directory)
 				if length(selected_columns[!,1]) == length(selected_columns[!,2])
 					pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
 					println(pvalue)
+					testinfo = DataFrame(cbs_result = correlation2, AgeDiagnosis = pvalue)
+					TestInfo = vcat(selected_columns, testinfo)
+					#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and Age at Diagnosis on ", file, Dates.today(),".csv"), TestInfo)
 				else
 					error("x and y have different lengths")
 				end
-			#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
 		end
 	end
 
+	#for loop 7
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1441,10 +1457,12 @@ function RunStatistics_Inter(directory)
 				if length(selected_columns[!,1]) == length(selected_columns[!,2])
 					pvalue = 2 * ccdf(Normal(), atanh(abs(cor(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
 					println(pvalue)
+					test_info = DataFrame(ks_result = correlation1, Size = pvalue)
+					Test_Info = vcat(selected_columns, test_info)
+					#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Size on ", file, Dates.today(),".csv"), Test_Info)
 				else
 					error("x and y have different lengths")
 				end
-			#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
 			
 			result2 = StatsBase.corspearman(selected_columns[!,1],selected_columns[!,2])
 			correlation2 = result2
@@ -1452,13 +1470,16 @@ function RunStatistics_Inter(directory)
 				if length(selected_columns[!,1]) == length(selected_columns[!,2])
 					pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
 					println(pvalue)
+					testinfo = DataFrame(ks_result = correlation2, Size = pvalue)
+					TestInfo = vcat(selected_columns, testinfo)
+					#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Size on ", file, Dates.today(),".csv"), TestInfo)
 				else
 					error("x and y have different lengths")
 				end
-			#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
 		end
 	end
 
+	#for loop 8
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1478,10 +1499,13 @@ function RunStatistics_Inter(directory)
 				if length(selected_columns[!,1]) == length(selected_columns[!,2])
 					pvalue = 2 * ccdf(Normal(), atanh(abs(cor(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
 					println(pvalue)
+					test_info = DataFrame(cbs_result = correlation1, Size = pvalue)
+					Test_Info = vcat(selected_columns, test_info)
+					#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and Size on ", file, Dates.today(),".csv"), Test_Info)
 				else
 					error("x and y have different lengths")
 				end
-			#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
+			
 			
 			result2 = StatsBase.corspearman(selected_columns[!,1],selected_columns[!,2])
 			correlation2 = result2
@@ -1489,13 +1513,105 @@ function RunStatistics_Inter(directory)
 				if length(selected_columns[!,1]) == length(selected_columns[!,2])
 					pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
 					println(pvalue)
+					testinfo = DataFrame(cbs_result = correlation2, Size = pvalue)
+					TestInfo = vcat(selected_columns, testinfo)
+					#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and Size on ", file, Dates.today(),".csv"), TestInfo)
 				else
 					error("x and y have different lengths")
 				end
-			#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
 		end
 	end
 
+	#for loop 9 
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            
+            selected_columns = select(query_file, :ks_result, :Grade)
+			#println(selected_columns)
+             grouped_data = groupby(selected_columns, :Grade)
+			 grouped_data_DataFrame = DataFrame(grouped_data)
+			 println(grouped_data_DataFrame)
+			
+			 result1 = KruskalWallisTest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
+			 x=result1
+			 println(x)
+			 # Get the chi-square statistic
+			#chi_sq_stat = result1.statistc
+
+			# Get the degrees of freedom
+			#df = result1.df
+
+			#println(pvalue(result1))
+			y = pvalue(result1)
+			println(y)
+			PVALUE= DataFrame(ks_result = y, Grade = ~)
+			Test_Info = vcat(grouped_data_DataFrame, PVALUE)
+			#@time CSV.write(string(JuliaStatsDir,"\\","Kruskal Wallis of KS Test and Grade on ", file, Dates.today(),".csv"), Test_Info)
+
+			# Compute the p-value using the chi-square distribution
+			#p_value = ccdf(Chisq(df), chi_sq_stat)
+			 #pvalue = parse(Float64, match(r"one-sided p-value:\s+([\d.]+)", result1).captures[1])
+			 #pvalue = result1.pvalue
+			 #pvalue = ccdf(Chisq(length(grouped_data-1)), x)
+
+			 result2 = OneWayANOVATest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
+			 z = pvalue(result2)
+			 println(z)
+			 PVALUE2 = DataFrame(ks_result = z, Grade = ~)
+			 TestInfo = vcat(grouped_data_DataFrame, PVALUE2)
+			 #@time CSV.write(string(JuliaStatsDir,"\\","One Way Anova of KS Test and Grade on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
+
+
+		#for loop 10
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+			filepath = joinpath(directory, file)
+			query_file = CSV.File(filepath) |> DataFrame
+			column_names = strip.(names(query_file))
+			println(column_names)
+				
+			selected_columns = select(query_file, :cbs_result, :Grade)
+			#println(selected_columns)
+			grouped_data = groupby(selected_columns, :Grade)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+				
+			result1 = KruskalWallisTest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
+			x=result1
+			println(x)
+			# Get the chi-square statistic
+			#chi_sq_stat = result1.statistc
+	
+			# Get the degrees of freedom
+			#df = result1.df
+	
+			#println(pvalue(result1))
+			y = pvalue(result1)
+			println(y)
+			PVALUE= DataFrame(cbs_result = y, Grade = ~)
+			Test_Info = vcat(grouped_data_DataFrame, PVALUE)
+			#@time CSV.write(string(JuliaStatsDir,"\\","Kruskal Wallis of Chebyshev Test and Grade on ", file, Dates.today(),".csv"), Test_Info)
+	
+			# Compute the p-value using the chi-square distribution
+			#p_value = ccdf(Chisq(df), chi_sq_stat)
+			#pvalue = parse(Float64, match(r"one-sided p-value:\s+([\d.]+)", result1).captures[1])
+			#pvalue = result1.pvalue
+			#pvalue = ccdf(Chisq(length(grouped_data-1)), x)
+	
+			result2 = OneWayANOVATest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
+			z = pvalue(result2)
+			println(z)
+			PVALUE2 = DataFrame(cbs_result = z, Grade = ~)
+			TestInfo = vcat(grouped_data_DataFrame, PVALUE2)
+			#@time CSV.write(string(JuliaStatsDir,"\\","One Way Anova of Chebyshev Test and Grade on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
 end
 
 directory8 = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\interdist"
