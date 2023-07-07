@@ -271,7 +271,7 @@ function makePlots(dist::Dict;len::Int=1800,wid::Int=2400,
 
 #  	return myplot
 
-#  end
+end
 
 
 function main(user_par=nothing)
@@ -492,12 +492,12 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
 
 	 ADResults=RunADTest(EmpiricalCDFs,TheoreticalCDFs,KSResults)
 
-	function RunCramerVonMisesTest(dataEmp, dataNull, stats)
-		CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
-		for i in keys(dataNull) 	
-			dist3 = fit(DiscreteNonParametric,dataNull[i])
-			for j in 
-		CVM_Results =  
+	# function RunCramerVonMisesTest(dataEmp, dataNull, stats)
+	# 	CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
+	# 	for i in keys(dataNull) 	
+	# 		dist3 = fit(DiscreteNonParametric,dataNull[i])
+	# 		for j in 
+	# 	CVM_Results =  
 
 	#  ADResults=RunADTest(EmpiricalCDFs,TheoreticalCDFs,KSResults)
 
@@ -540,7 +540,21 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
 	CBSResults = Chebyshev(EmpiricalCDFs,TheoreticalCDFs,KLDResults)
 	println("Finished Chebyshev Distance")
 
-
+	println("Starting Jensen-Shannon Divergence")
+	function JensenShannon(dataEmp,dataNull,stats)
+		js_col = DataFrame(js_result= [])
+		for i in keys(dataNull)
+			A = hcat(dataEmp[i]...)[2,:]
+			B = hcat(dataNull[i]...)[2,:]
+			js_result = js_divergence(A,B)
+			append!(js_col, DataFrame(js_result=js_result))
+		end
+ 
+		stats=hcat(stats,js_col)
+		return stats
+	end
+	JSResults = JensenShannon(EmpiricalCDFs,TheoreticalCDFs,CBSResults)
+	println("Finished Jensen-Shannon Divergence")
 
  	# add a column to statistics DF that has patient name 
  	JSResults[:,:patient] .= indName 
@@ -1196,7 +1210,7 @@ function RunStatistics_Inter(directory)
 	ReadingFiles3 = readdir(directory)
     println(ReadingFiles3)
 
-	# for loop 1
+	#1 - Unequal Variance Test and Mann Whitney of KS and Gender
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1221,7 +1235,7 @@ function RunStatistics_Inter(directory)
 			println(DoF)
 			test_info = DataFrame(ks_result = pvalue_test1, Gender = DoF)
 			Test_Info = vcat(grouped_data_DataFrame, test_info)
-			#@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
 			
 			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
 			pvalue_test2 = pvalue(result2)
@@ -1229,11 +1243,11 @@ function RunStatistics_Inter(directory)
 			testinfo = DataFrame(ks_result = pvalue_test2, Gender = ~)
 			TestInfo = vcat(grouped_data_DataFrame, testinfo)
 			println(TestInfo)
-			#@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
 		end
 	end
 
-	#for loop 2
+	#2 - Unequal Variance Test and Mann Whitney of chebyshev and Gender
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1256,21 +1270,21 @@ function RunStatistics_Inter(directory)
 			n2 = length(grouped_data[2][!,1])
 			DoF = n1+n2-2
 			println(DoF)
-			test_info = DataFrame(ks_result = pvalue_test1, Gender = DoF)
+			test_info = DataFrame(cbs_result = pvalue_test1, Gender = DoF)
 			Test_Info = vcat(grouped_data_DataFrame, test_info)
-			#@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and Gender on ", file, Dates.today(),".csv"), Test_Info)
 			
 			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
 			pvalue_test2 = pvalue(result2)
 			println(pvalue_test2)
-			testinfo = DataFrame(ks_result = pvalue_test2, Gender = ~)
+			testinfo = DataFrame(cbs_result = pvalue_test2, Gender = ~)
 			TestInfo = vcat(grouped_data_DataFrame, testinfo)
 			println(TestInfo)
-			#@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and Gender on ", file, Dates.today(),".csv"), TestInfo)
 		end
 	end
 
-		#for loop 3
+		#3 - Unequal Variance Test and Mann Whitney of KS and Race
 		for file in ReadingFiles3
 			if occursin(".csv", file)
 				filepath = joinpath(directory, file)
@@ -1299,7 +1313,7 @@ function RunStatistics_Inter(directory)
 				test_info = DataFrame(ks_result = pvalue_test1, Race = DoF)
 				Test_Info = vcat(grouped_data_DataFrame, test_info)
 				println(Test_Info)
-				#@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and Race on ", file, Dates.today(),".csv"), Test_Info)
+				@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and Race on ", file, Dates.today(),".csv"), Test_Info)
 				
 				result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_grouped_data[!,1])
 				pvalue_test2 = pvalue(result2)
@@ -1307,11 +1321,11 @@ function RunStatistics_Inter(directory)
 				testinfo = DataFrame(ks_result = pvalue_test2, Race = ~)
 				TestInfo = vcat(grouped_data_DataFrame, testinfo)
 				println(TestInfo)
-				#@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and Race on ", file, Dates.today(),".csv"), TestInfo)
+				@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and Race on ", file, Dates.today(),".csv"), TestInfo)
 			end
 	end
 
-	#for loop 4
+	#4 - Unequal Variance Test and Mann Whitney of chebyshev and Race
 	for file in ReadingFiles3
 		if occursin(".csv", file)
 			filepath = joinpath(directory, file)
@@ -1337,22 +1351,22 @@ function RunStatistics_Inter(directory)
 			n2 = length(grouped_grouped_data[!,1])
 			DoF = n1+n2-2
 			#println(DoF)
-			test_info = DataFrame(ks_result = pvalue_test1, Race = DoF)
+			test_info = DataFrame(cbs_result = pvalue_test1, Race = DoF)
 			Test_Info = vcat(grouped_data_DataFrame, test_info)
 			println(Test_Info)
-			#@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and Race on ", file, Dates.today(),".csv"), Test_Info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and Race on ", file, Dates.today(),".csv"), Test_Info)
 			
 			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_grouped_data[!,1])
 			pvalue_test2 = pvalue(result2)
 			#println(pvalue_test2)
-			testinfo = DataFrame(ks_result = pvalue_test2, Race = ~)
+			testinfo = DataFrame(cbs_result = pvalue_test2, Race = ~)
 			TestInfo = vcat(grouped_data_DataFrame, testinfo)
 			println(TestInfo)
-			#@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and Race on ", file, Dates.today(),".csv"), TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and Race on ", file, Dates.today(),".csv"), TestInfo)
 		end
 	end
 
-	#for loop 5
+	#5 - Pearson and Spearman correlations of KS and age at diagnosis
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1374,7 +1388,7 @@ function RunStatistics_Inter(directory)
 					println(pvalue)
 					test_info = DataFrame(ks_result = correlation1, AgeDiagnosis = pvalue)
 					Test_Info = vcat(selected_columns, test_info)
-					#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Age at Diagnosis on ", file, Dates.today(),".csv"), Test_Info)
+					@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Age at Diagnosis on ", file, Dates.today(),".csv"), Test_Info)
 				else
 					error("x and y have different lengths")
 				end
@@ -1387,14 +1401,14 @@ function RunStatistics_Inter(directory)
 					println(pvalue)
 					testinfo = DataFrame(ks_result = correlation2, AgeDiagnosis = pvalue)
 					TestInfo = vcat(selected_columns, testinfo)
-					#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Age at Diagnosis on ", file, Dates.today(),".csv"), TestInfo)
+					@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Age at Diagnosis on ", file, Dates.today(),".csv"), TestInfo)
 				else
 					error("x and y have different lengths")
 				end
 		end
 	end
 
-	#for loop 6 
+	#6 - Pearson and Spearman correlations of chebyshev and age at diagnosis
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1416,7 +1430,7 @@ function RunStatistics_Inter(directory)
 					println(pvalue)
 					test_info = DataFrame(cbs_result = correlation1, AgeDiagnosis = pvalue)
 					Test_Info = vcat(selected_columns, test_info)
-					#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and Age at Diagnosis on ", file, Dates.today(),".csv"), Test_Info)
+					@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and Age at Diagnosis on ", file, Dates.today(),".csv"), Test_Info)
 
 				else
 					error("x and y have different lengths")
@@ -1430,14 +1444,14 @@ function RunStatistics_Inter(directory)
 					println(pvalue)
 					testinfo = DataFrame(cbs_result = correlation2, AgeDiagnosis = pvalue)
 					TestInfo = vcat(selected_columns, testinfo)
-					#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and Age at Diagnosis on ", file, Dates.today(),".csv"), TestInfo)
+					@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and Age at Diagnosis on ", file, Dates.today(),".csv"), TestInfo)
 				else
 					error("x and y have different lengths")
 				end
 		end
 	end
 
-	#for loop 7
+	#7 -Pearson and Spearman correlations of KS and size
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1447,39 +1461,40 @@ function RunStatistics_Inter(directory)
             
             selected_columns = select(query_file, :ks_result, :Size)
 			println(selected_columns)
+			cleaned_data = dropmissing(selected_columns)
             # grouped_data = groupby(selected_columns, :AgeDiagnosis)
 			# grouped_data_DataFrame = DataFrame(grouped_data)
 			# println(grouped_data_DataFrame)
 
-			result1 = Statistics.cor(selected_columns[!,1],selected_columns[!,2])
+			result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
 			correlation1 = result1
 			println(correlation1)
-				if length(selected_columns[!,1]) == length(selected_columns[!,2])
-					pvalue = 2 * ccdf(Normal(), atanh(abs(cor(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
+				if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+					pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
 					println(pvalue)
 					test_info = DataFrame(ks_result = correlation1, Size = pvalue)
-					Test_Info = vcat(selected_columns, test_info)
-					#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Size on ", file, Dates.today(),".csv"), Test_Info)
+					Test_Info = vcat(cleaned_data, test_info)
+					@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and Size on ", file, Dates.today(),".csv"), Test_Info)
 				else
 					error("x and y have different lengths")
 				end
 			
-			result2 = StatsBase.corspearman(selected_columns[!,1],selected_columns[!,2])
+			result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
 			correlation2 = result2
 			println(correlation2)
-				if length(selected_columns[!,1]) == length(selected_columns[!,2])
-					pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
+				if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+					pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
 					println(pvalue)
 					testinfo = DataFrame(ks_result = correlation2, Size = pvalue)
-					TestInfo = vcat(selected_columns, testinfo)
-					#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Size on ", file, Dates.today(),".csv"), TestInfo)
+					TestInfo = vcat(cleaned_data, testinfo)
+					@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and Size on ", file, Dates.today(),".csv"), TestInfo)
 				else
 					error("x and y have different lengths")
 				end
 		end
 	end
 
-	#for loop 8
+	#8 - Pearson and Spearman correlations of chebyshev and size
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1489,40 +1504,41 @@ function RunStatistics_Inter(directory)
             
             selected_columns = select(query_file, :cbs_result, :Size)
 			println(selected_columns)
+			cleaned_data = dropmissing(selected_columns)
             # grouped_data = groupby(selected_columns, :AgeDiagnosis)
 			# grouped_data_DataFrame = DataFrame(grouped_data)
 			# println(grouped_data_DataFrame)
 
-			result1 = Statistics.cor(selected_columns[!,1],selected_columns[!,2])
+			result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
 			correlation1 = result1
 			println(correlation1)
-				if length(selected_columns[!,1]) == length(selected_columns[!,2])
-					pvalue = 2 * ccdf(Normal(), atanh(abs(cor(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
+				if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+					pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
 					println(pvalue)
 					test_info = DataFrame(cbs_result = correlation1, Size = pvalue)
-					Test_Info = vcat(selected_columns, test_info)
-					#@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and Size on ", file, Dates.today(),".csv"), Test_Info)
+					Test_Info = vcat(cleaned_data, test_info)
+					@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and Size on ", file, Dates.today(),".csv"), Test_Info)
 				else
 					error("x and y have different lengths")
 				end
 			
 			
-			result2 = StatsBase.corspearman(selected_columns[!,1],selected_columns[!,2])
+			result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
 			correlation2 = result2
 			println(correlation2)
-				if length(selected_columns[!,1]) == length(selected_columns[!,2])
-					pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(selected_columns[!,1],selected_columns[!,2]))) * sqrt(length(selected_columns[!,1]) - 3))
+				if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+					pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
 					println(pvalue)
 					testinfo = DataFrame(cbs_result = correlation2, Size = pvalue)
-					TestInfo = vcat(selected_columns, testinfo)
-					#@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and Size on ", file, Dates.today(),".csv"), TestInfo)
+					TestInfo = vcat(cleaned_data, testinfo)
+					@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and Size on ", file, Dates.today(),".csv"), TestInfo)
 				else
 					error("x and y have different lengths")
 				end
 		end
 	end
 
-	#for loop 9 
+	# #9 - Unequal Variance Test and Mann Whitney of KS and Grade (pairwise)
 	for file in ReadingFiles3
 		if occursin(".csv", file)
             filepath = joinpath(directory, file)
@@ -1532,43 +1548,91 @@ function RunStatistics_Inter(directory)
             
             selected_columns = select(query_file, :ks_result, :Grade)
 			#println(selected_columns)
-             grouped_data = groupby(selected_columns, :Grade)
-			 grouped_data_DataFrame = DataFrame(grouped_data)
-			 println(grouped_data_DataFrame)
+            grouped_data = groupby(selected_columns, :Grade)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+			#println(grouped_data[1][!,1])
 			
-			 result1 = KruskalWallisTest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
-			 x=result1
-			 println(x)
-			 # Get the chi-square statistic
-			#chi_sq_stat = result1.statistc
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF1 = n1+n2-2
+			println(DoF1)
+			result2 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[3][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[3][!,1])
+			DoF2 = n1+n2-2
+			println(DoF2)
+			result3 = UnequalVarianceTTest(grouped_data[2][!,1],grouped_data[3][!,1])
+			pvalue_test3 = pvalue(result3)
+			println(pvalue_test3)
+			n1=length(grouped_data[2][!,1])
+			n2 = length(grouped_data[3][!,1])
+			DoF3 = n1+n2-2
+			println(DoF2)
+			test_info1 = DataFrame(ks_result = pvalue_test1, Grade = DoF1)
+			Test_Info = vcat(grouped_data_DataFrame, test_info1)
+			test_info2 = DataFrame(ks_result = pvalue_test2, Grade = DoF2)
+			Test_Info2 = vcat(Test_Info, test_info2)
+			test_info3 = DataFrame(ks_result = pvalue_test3, Grade = DoF3)
+			Test_Info3 = vcat(Test_Info2,test_info3)
+			println(Test_Info3)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and Grade on ", file, Dates.today(),".csv"), Test_Info3)
+			
+			result4 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test4 = pvalue(result4)
+			println(pvalue_test4)
+			result5 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[3][!,1])
+			pvalue_test5 = pvalue(result5)
+			println(pvalue_test5)
+			result6 = MannWhitneyUTest(grouped_data[2][!,1],grouped_data[3][!,1])
+			pvalue_test6 = pvalue(result6)
+			println(pvalue_test6)
+			testinfo4 = DataFrame(ks_result = pvalue_test4, Grade = ~)
+			TestInfo4 = vcat(grouped_data_DataFrame, testinfo4)
+			testinfo5 = DataFrame(ks_result = pvalue_test5, Grade = ~)
+			TestInfo5 = vcat(TestInfo4, testinfo5)
+			testinfo6 = DataFrame(ks_result = pvalue_test6, Grade = ~)
+			TestInfo6 = vcat(TestInfo5, testinfo6)
+			println(TestInfo6)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and Grade on ", file, Dates.today(),".csv"), TestInfo6)
 
-			# Get the degrees of freedom
-			#df = result1.df
+	# 		 result1 = KruskalWallisTest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
+	# 		 x=result1
+	# 		 println(x)
+	# 		 # Get the chi-square statistic
+	# 		#chi_sq_stat = result1.statistc
 
-			#println(pvalue(result1))
-			y = pvalue(result1)
-			println(y)
-			PVALUE= DataFrame(ks_result = y, Grade = ~)
-			Test_Info = vcat(grouped_data_DataFrame, PVALUE)
-			#@time CSV.write(string(JuliaStatsDir,"\\","Kruskal Wallis of KS Test and Grade on ", file, Dates.today(),".csv"), Test_Info)
+	# 		# Get the degrees of freedom
+	# 		#df = result1.df
 
-			# Compute the p-value using the chi-square distribution
-			#p_value = ccdf(Chisq(df), chi_sq_stat)
-			 #pvalue = parse(Float64, match(r"one-sided p-value:\s+([\d.]+)", result1).captures[1])
-			 #pvalue = result1.pvalue
-			 #pvalue = ccdf(Chisq(length(grouped_data-1)), x)
+	# 		#println(pvalue(result1))
+	# 		y = pvalue(result1)
+	# 		println(y)
+	# 		PVALUE= DataFrame(ks_result = y, Grade = ~)
+	# 		Test_Info = vcat(grouped_data_DataFrame, PVALUE)
+	# 		#@time CSV.write(string(JuliaStatsDir,"\\","Kruskal Wallis of KS Test and Grade on ", file, Dates.today(),".csv"), Test_Info)
 
-			 result2 = OneWayANOVATest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
-			 z = pvalue(result2)
-			 println(z)
-			 PVALUE2 = DataFrame(ks_result = z, Grade = ~)
-			 TestInfo = vcat(grouped_data_DataFrame, PVALUE2)
-			 #@time CSV.write(string(JuliaStatsDir,"\\","One Way Anova of KS Test and Grade on ", file, Dates.today(),".csv"), TestInfo)
-		end
-	end
+	# 		# Compute the p-value using the chi-square distribution
+	# 		#p_value = ccdf(Chisq(df), chi_sq_stat)
+	# 		 #pvalue = parse(Float64, match(r"one-sided p-value:\s+([\d.]+)", result1).captures[1])
+	# 		 #pvalue = result1.pvalue
+	# 		 #pvalue = ccdf(Chisq(length(grouped_data-1)), x)
 
+	# 		 result2 = OneWayANOVATest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
+	# 		 z = pvalue(result2)
+	# 		 println(z)
+	# 		 PVALUE2 = DataFrame(ks_result = z, Grade = ~)
+	# 		 TestInfo = vcat(grouped_data_DataFrame, PVALUE2)
+	# 		 #@time CSV.write(string(JuliaStatsDir,"\\","One Way Anova of KS Test and Grade on ", file, Dates.today(),".csv"), TestInfo)
+	 	end
+	 end
 
-		#for loop 10
+	# #10 - Unequal Variance Test and Mann Whitney of Chebyshev and Grade (pairwise)
 	for file in ReadingFiles3
 		if occursin(".csv", file)
 			filepath = joinpath(directory, file)
@@ -1582,34 +1646,966 @@ function RunStatistics_Inter(directory)
 			grouped_data_DataFrame = DataFrame(grouped_data)
 			println(grouped_data_DataFrame)
 				
-			result1 = KruskalWallisTest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
-			x=result1
-			println(x)
-			# Get the chi-square statistic
-			#chi_sq_stat = result1.statistc
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF1 = n1+n2-2
+			println(DoF1)
+			result2 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[3][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[3][!,1])
+			DoF2 = n1+n2-2
+			println(DoF2)
+			result3 = UnequalVarianceTTest(grouped_data[2][!,1],grouped_data[3][!,1])
+			pvalue_test3 = pvalue(result3)
+			println(pvalue_test3)
+			n1=length(grouped_data[2][!,1])
+			n2 = length(grouped_data[3][!,1])
+			DoF3 = n1+n2-2
+			println(DoF2)
+			test_info1 = DataFrame(cbs_result = pvalue_test1, Grade = DoF1)
+			Test_Info = vcat(grouped_data_DataFrame, test_info1)
+			test_info2 = DataFrame(cbs_result = pvalue_test2, Grade = DoF2)
+			Test_Info2 = vcat(Test_Info, test_info2)
+			test_info3 = DataFrame(cbs_result = pvalue_test3, Grade = DoF3)
+			Test_Info3 = vcat(Test_Info2,test_info3)
+			println(Test_Info3)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and Grade on ", file, Dates.today(),".csv"), Test_Info3)
+			
+			result4 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test4 = pvalue(result4)
+			println(pvalue_test4)
+			result5 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[3][!,1])
+			pvalue_test5 = pvalue(result5)
+			println(pvalue_test5)
+			result6 = MannWhitneyUTest(grouped_data[2][!,1],grouped_data[3][!,1])
+			pvalue_test6 = pvalue(result6)
+			println(pvalue_test6)
+			testinfo4 = DataFrame(cbs_result = pvalue_test4, Grade = ~)
+			TestInfo4 = vcat(grouped_data_DataFrame, testinfo4)
+			testinfo5 = DataFrame(cbs_result = pvalue_test5, Grade = ~)
+			TestInfo5 = vcat(TestInfo4, testinfo5)
+			testinfo6 = DataFrame(cbs_result = pvalue_test6, Grade = ~)
+			TestInfo6 = vcat(TestInfo5, testinfo6)
+			println(TestInfo6)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and Grade on ", file, Dates.today(),".csv"), TestInfo6)
+			# result1 = KruskalWallisTest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
+			# x=result1
+			# println(x)
+			# # Get the chi-square statistic
+			# #chi_sq_stat = result1.statistc
 	
-			# Get the degrees of freedom
-			#df = result1.df
+			# # Get the degrees of freedom
+			# #df = result1.df
 	
-			#println(pvalue(result1))
-			y = pvalue(result1)
-			println(y)
-			PVALUE= DataFrame(cbs_result = y, Grade = ~)
-			Test_Info = vcat(grouped_data_DataFrame, PVALUE)
-			#@time CSV.write(string(JuliaStatsDir,"\\","Kruskal Wallis of Chebyshev Test and Grade on ", file, Dates.today(),".csv"), Test_Info)
+			# #println(pvalue(result1))
+			# y = pvalue(result1)
+			# println(y)
+			# PVALUE= DataFrame(cbs_result = y, Grade = ~)
+			# Test_Info = vcat(grouped_data_DataFrame, PVALUE)
+			# @time CSV.write(string(JuliaStatsDir,"\\","Kruskal Wallis of Chebyshev Test and Grade on ", file, Dates.today(),".csv"), Test_Info)
 	
-			# Compute the p-value using the chi-square distribution
-			#p_value = ccdf(Chisq(df), chi_sq_stat)
-			#pvalue = parse(Float64, match(r"one-sided p-value:\s+([\d.]+)", result1).captures[1])
-			#pvalue = result1.pvalue
-			#pvalue = ccdf(Chisq(length(grouped_data-1)), x)
+			# # Compute the p-value using the chi-square distribution
+			# #p_value = ccdf(Chisq(df), chi_sq_stat)
+			# #pvalue = parse(Float64, match(r"one-sided p-value:\s+([\d.]+)", result1).captures[1])
+			# #pvalue = result1.pvalue
+			# #pvalue = ccdf(Chisq(length(grouped_data-1)), x)
 	
-			result2 = OneWayANOVATest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
-			z = pvalue(result2)
-			println(z)
-			PVALUE2 = DataFrame(cbs_result = z, Grade = ~)
-			TestInfo = vcat(grouped_data_DataFrame, PVALUE2)
-			#@time CSV.write(string(JuliaStatsDir,"\\","One Way Anova of Chebyshev Test and Grade on ", file, Dates.today(),".csv"), TestInfo)
+			# result2 = OneWayANOVATest(grouped_data[1][!,1],grouped_data[2][!,1],grouped_data[3][!,1])
+			# z = pvalue(result2)
+			# println(z)
+			# PVALUE2 = DataFrame(cbs_result = z, Grade = ~)
+			# TestInfo = vcat(grouped_data_DataFrame, PVALUE2)
+			# @time CSV.write(string(JuliaStatsDir,"\\","One Way Anova of Chebyshev Test and Grade on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
+
+	#11 - Unequal Variance Test and Mann Whitney of KS and SarcomatoidStatus
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            
+            
+            selected_columns = select(query_file, :ks_result, :SarcomatoidStatus)
+            grouped_data = groupby(selected_columns, :SarcomatoidStatus)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF = n1+n2-2
+			println(DoF)
+			test_info = DataFrame(ks_result = pvalue_test1, SarcomatoidStatus = DoF)
+			Test_Info = vcat(grouped_data_DataFrame, test_info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and SarcomatoidStatus on ", file, Dates.today(),".csv"), Test_Info)
+			
+			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			testinfo = DataFrame(ks_result = pvalue_test2, SarcomatoidStatus = ~)
+			TestInfo = vcat(grouped_data_DataFrame, testinfo)
+			println(TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and SarcomatoidStatus on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
+
+	#12 - Unequal Variance Test and Mann Whitney of chebyshev and SarcomatoidStatus
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            
+            
+            selected_columns = select(query_file, :cbs_result, :SarcomatoidStatus)
+            grouped_data = groupby(selected_columns, :SarcomatoidStatus)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF = n1+n2-2
+			println(DoF)
+			test_info = DataFrame(cbs_result = pvalue_test1, Gender = DoF)
+			Test_Info = vcat(grouped_data_DataFrame, test_info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and SarcomatoidStatus on ", file, Dates.today(),".csv"), Test_Info)
+			
+			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			testinfo = DataFrame(cbs_result = pvalue_test2, Gender = ~)
+			TestInfo = vcat(grouped_data_DataFrame, testinfo)
+			println(TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and SarcomatoidStatus on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
+
+	#13 - Unequal Variance Test and Mann Whitney of KS and RhabdoidStatus
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            
+            
+            selected_columns = select(query_file, :ks_result, :RhabdoidStatus)
+            grouped_data = groupby(selected_columns, :RhabdoidStatus)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF = n1+n2-2
+			println(DoF)
+			test_info = DataFrame(ks_result = pvalue_test1, RhabdoidStatus = DoF)
+			Test_Info = vcat(grouped_data_DataFrame, test_info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and RhabdoidStatus on ", file, Dates.today(),".csv"), Test_Info)
+			
+			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			testinfo = DataFrame(ks_result = pvalue_test2, RhabdoidStatus = ~)
+			TestInfo = vcat(grouped_data_DataFrame, testinfo)
+			println(TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and RhabdoidStatus on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
+
+	#14 - Unequal Variance Test and Mann Whitney of chebyshev and RhabdoidStatus
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            
+            
+            selected_columns = select(query_file, :cbs_result, :RhabdoidStatus)
+            grouped_data = groupby(selected_columns, :RhabdoidStatus)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF = n1+n2-2
+			println(DoF)
+			test_info = DataFrame(cbs_result = pvalue_test1, RhabdoidStatus = DoF)
+			Test_Info = vcat(grouped_data_DataFrame, test_info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and SarcomatoidStatus on ", file, Dates.today(),".csv"), Test_Info)
+			
+			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			testinfo = DataFrame(cbs_result = pvalue_test2, RhabdoidStatus = ~)
+			TestInfo = vcat(grouped_data_DataFrame, testinfo)
+			println(TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and RhabdoidStatus on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
+
+	#15 - Unequal Variance Test and Mann Whitney of KS and Laterality
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            
+            
+            selected_columns = select(query_file, :ks_result, :Laterality)
+            grouped_data = groupby(selected_columns, :Laterality)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF = n1+n2-2
+			println(DoF)
+			test_info = DataFrame(ks_result = pvalue_test1, Laterality = DoF)
+			Test_Info = vcat(grouped_data_DataFrame, test_info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and Laterality on ", file, Dates.today(),".csv"), Test_Info)
+			
+			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			testinfo = DataFrame(ks_result = pvalue_test2, Laterality = ~)
+			TestInfo = vcat(grouped_data_DataFrame, testinfo)
+			println(TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and Laterality on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
+
+	#16 - Unequal Variance Test and Mann Whitney of chebyshev and Laterality
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            
+            
+            selected_columns = select(query_file, :cbs_result, :Laterality)
+            grouped_data = groupby(selected_columns, :Laterality)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = pvalue(result1)
+			println(pvalue_test1)
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF = n1+n2-2
+			println(DoF)
+			test_info = DataFrame(cbs_result = pvalue_test1, Laterality = DoF)
+			Test_Info = vcat(grouped_data_DataFrame, test_info)
+			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and Laterality on ", file, Dates.today(),".csv"), Test_Info)
+			
+			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			testinfo = DataFrame(cbs_result = pvalue_test2, Laterality = ~)
+			TestInfo = vcat(grouped_data_DataFrame, testinfo)
+			println(TestInfo)
+			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and Laterality on ", file, Dates.today(),".csv"), TestInfo)
+		end
+	end
+
+		#17 -Pearson and Spearman correlations of KS and EGFRnormReads
+		for file in ReadingFiles3
+			if occursin(".csv", file)
+				filepath = joinpath(directory, file)
+				query_file = CSV.File(filepath) |> DataFrame
+				column_names = strip.(names(query_file))
+				println(column_names)
+				
+				selected_columns = select(query_file, :ks_result, :EGFRnormReads)
+				println(selected_columns)
+				cleaned_data = dropmissing(selected_columns)
+				# grouped_data = groupby(selected_columns, :AgeDiagnosis)
+				# grouped_data_DataFrame = DataFrame(grouped_data)
+				# println(grouped_data_DataFrame)
+	
+				result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
+				correlation1 = result1
+				println(correlation1)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						test_info = DataFrame(ks_result = correlation1, EGFRnormReads = pvalue)
+						Test_Info = vcat(cleaned_data, test_info)
+						@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and EGFRnormReads on ", file, Dates.today(),".csv"), Test_Info)
+					else
+						error("x and y have different lengths")
+					end
+				
+				result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
+				correlation2 = result2
+				println(correlation2)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						testinfo = DataFrame(ks_result = correlation2, EGFRnormReads = pvalue)
+						TestInfo = vcat(cleaned_data, testinfo)
+						@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and EGFRnormReads on ", file, Dates.today(),".csv"), TestInfo)
+					else
+						error("x and y have different lengths")
+					end
+			end
+		end
+	
+		#18 - Pearson and Spearman correlations of chebyshev and EGFRnormReads
+		for file in ReadingFiles3
+			if occursin(".csv", file)
+				filepath = joinpath(directory, file)
+				query_file = CSV.File(filepath) |> DataFrame
+				column_names = strip.(names(query_file))
+				println(column_names)
+				
+				selected_columns = select(query_file, :cbs_result, :EGFRnormReads)
+				println(selected_columns)
+				cleaned_data = dropmissing(selected_columns)
+				# grouped_data = groupby(selected_columns, :EGFRnormReads)
+				# grouped_data_DataFrame = DataFrame(grouped_data)
+				# println(grouped_data_DataFrame)
+	
+				result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
+				correlation1 = result1
+				println(correlation1)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						test_info = DataFrame(cbs_result = correlation1, EGFRnormReads = pvalue)
+						Test_Info = vcat(cleaned_data, test_info)
+						@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and EGFRnormReads on ", file, Dates.today(),".csv"), Test_Info)
+					else
+						error("x and y have different lengths")
+					end
+				
+				
+				result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
+				correlation2 = result2
+				println(correlation2)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						testinfo = DataFrame(cbs_result = correlation2, EGFRnormReads = pvalue)
+						TestInfo = vcat(cleaned_data, testinfo)
+						@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and EGFRnormReads on ", file, Dates.today(),".csv"), TestInfo)
+					else
+						error("x and y have different lengths")
+					end
+			end
+		end
+
+		#19 -Pearson and Spearman correlations of KS and EGFRalphaReads
+		for file in ReadingFiles3
+			if occursin(".csv", file)
+				filepath = joinpath(directory, file)
+				query_file = CSV.File(filepath) |> DataFrame
+				column_names = strip.(names(query_file))
+				println(column_names)
+						
+				selected_columns = select(query_file, :ks_result, :EGFRalphaReads)
+				println(selected_columns)
+				cleaned_data = dropmissing(selected_columns)
+						# grouped_data = groupby(selected_columns, :EGFRalphaReads)
+						# grouped_data_DataFrame = DataFrame(grouped_data)
+						# println(grouped_data_DataFrame)
+			
+				result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
+				correlation1 = result1
+				println(correlation1)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						test_info = DataFrame(ks_result = correlation1, EGFRalphaReads = pvalue)
+						Test_Info = vcat(cleaned_data, test_info)
+						@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and EGFRalphaReads on ", file, Dates.today(),".csv"), Test_Info)
+					else
+						error("x and y have different lengths")
+					end
+						
+				result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
+				correlation2 = result2
+				println(correlation2)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						testinfo = DataFrame(ks_result = correlation2, EGFRalphaReads = pvalue)
+						TestInfo = vcat(cleaned_data, testinfo)
+						@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and EGFRalphaReads on ", file, Dates.today(),".csv"), TestInfo)
+					else
+						error("x and y have different lengths")
+					end
+				end
+		end
+			
+		#20 - Pearson and Spearman correlations of chebyshev and EGFRnormReads
+		for file in ReadingFiles3
+			if occursin(".csv", file)
+				filepath = joinpath(directory, file)
+				query_file = CSV.File(filepath) |> DataFrame
+				column_names = strip.(names(query_file))
+				println(column_names)
+						
+				selected_columns = select(query_file, :cbs_result, :EGFRalphaReads)
+				println(selected_columns)
+				cleaned_data = dropmissing(selected_columns)
+						# grouped_data = groupby(selected_columns, :EGFRalphaReads)
+						# grouped_data_DataFrame = DataFrame(grouped_data)
+						# println(grouped_data_DataFrame)
+			
+				result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
+				correlation1 = result1
+				println(correlation1)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						test_info = DataFrame(cbs_result = correlation1, EGFRalphaReads = pvalue)
+						Test_Info = vcat(cleaned_data, test_info)
+						@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and EGFRalphaReads on ", file, Dates.today(),".csv"), Test_Info)
+					else
+						error("x and y have different lengths")
+					end
+						
+						
+				result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
+				correlation2 = result2
+				println(correlation2)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						testinfo = DataFrame(cbs_result = correlation2, EGFRalphaReads = pvalue)
+						TestInfo = vcat(cleaned_data, testinfo)
+						@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and EGFRalphaReads on ", file, Dates.today(),".csv"), TestInfo)
+					else
+						error("x and y have different lengths")
+					end
+			end
+		end
+
+		#21 -Pearson and Spearman correlations of KS and EGFRbetaReads
+		for file in ReadingFiles3
+			if occursin(".csv", file)
+				filepath = joinpath(directory, file)
+				query_file = CSV.File(filepath) |> DataFrame
+				column_names = strip.(names(query_file))
+				println(column_names)
+						
+				selected_columns = select(query_file, :ks_result, :EGFRbetaReads)
+				println(selected_columns)
+				cleaned_data = dropmissing(selected_columns)
+						# grouped_data = groupby(selected_columns, :EGFRbetaReads)
+						# grouped_data_DataFrame = DataFrame(grouped_data)
+						# println(grouped_data_DataFrame)
+			
+				result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
+				correlation1 = result1
+				println(correlation1)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						test_info = DataFrame(ks_result = correlation1, EGFRbetaReads = pvalue)
+						Test_Info = vcat(cleaned_data, test_info)
+						@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and EGFRbetaReads on ", file, Dates.today(),".csv"), Test_Info)
+					else
+						error("x and y have different lengths")
+					end
+						
+				result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
+				correlation2 = result2
+				println(correlation2)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						testinfo = DataFrame(ks_result = correlation2, EGFRbetaReads = pvalue)
+						TestInfo = vcat(cleaned_data, testinfo)
+						@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and EGFRbetaReads on ", file, Dates.today(),".csv"), TestInfo)
+					else
+						error("x and y have different lengths")
+					end
+				end
+		end
+			
+		#22 - Pearson and Spearman correlations of chebyshev and EGFRnormReads
+		for file in ReadingFiles3
+			if occursin(".csv", file)
+				filepath = joinpath(directory, file)
+				query_file = CSV.File(filepath) |> DataFrame
+				column_names = strip.(names(query_file))
+				println(column_names)
+						
+				selected_columns = select(query_file, :cbs_result, :EGFRbetaReads)
+				println(selected_columns)
+				cleaned_data = dropmissing(selected_columns)
+						# grouped_data = groupby(selected_columns, :EGFRbetaReads)
+						# grouped_data_DataFrame = DataFrame(grouped_data)
+						# println(grouped_data_DataFrame)
+			
+				result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
+				correlation1 = result1
+				println(correlation1)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						test_info = DataFrame(cbs_result = correlation1, EGFRbetaReads = pvalue)
+						Test_Info = vcat(cleaned_data, test_info)
+						@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and EGFRbetaReads on ", file, Dates.today(),".csv"), Test_Info)
+					else
+						error("x and y have different lengths")
+					end
+						
+						
+				result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
+				correlation2 = result2
+				println(correlation2)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						testinfo = DataFrame(cbs_result = correlation2, EGFRbetaReads = pvalue)
+						TestInfo = vcat(cleaned_data, testinfo)
+						@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and EGFRbetaReads on ", file, Dates.today(),".csv"), TestInfo)
+					else
+						error("x and y have different lengths")
+					end
+			end
+		end
+
+		#23 -Pearson and Spearman correlations of KS and EGFRgammaReads
+		for file in ReadingFiles3
+			if occursin(".csv", file)
+				filepath = joinpath(directory, file)
+				query_file = CSV.File(filepath) |> DataFrame
+				column_names = strip.(names(query_file))
+				println(column_names)
+						
+				selected_columns = select(query_file, :ks_result, :EGFRgammaReads)
+				println(selected_columns)
+				cleaned_data = dropmissing(selected_columns)
+						# grouped_data = groupby(selected_columns, :EGFRgammaReads)
+						# grouped_data_DataFrame = DataFrame(grouped_data)
+						# println(grouped_data_DataFrame)
+			
+				result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
+				correlation1 = result1
+				println(correlation1)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						test_info = DataFrame(ks_result = correlation1, EGFRgammaReads = pvalue)
+						Test_Info = vcat(cleaned_data, test_info)
+						@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of KS Test and EGFRgammaReads on ", file, Dates.today(),".csv"), Test_Info)
+					else
+						error("x and y have different lengths")
+					end
+						
+				result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
+				correlation2 = result2
+				println(correlation2)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						testinfo = DataFrame(ks_result = correlation2, EGFRgammaReads = pvalue)
+						TestInfo = vcat(cleaned_data, testinfo)
+						@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of KS Test and EGFRgammaReads on ", file, Dates.today(),".csv"), TestInfo)
+					else
+						error("x and y have different lengths")
+					end
+				end
+		end
+			
+		#24 - Pearson and Spearman correlations of chebyshev and EGFRgammaReads
+		for file in ReadingFiles3
+			if occursin(".csv", file)
+				filepath = joinpath(directory, file)
+				query_file = CSV.File(filepath) |> DataFrame
+				column_names = strip.(names(query_file))
+				println(column_names)
+						
+				selected_columns = select(query_file, :cbs_result, :EGFRgammaReads)
+				println(selected_columns)
+				cleaned_data = dropmissing(selected_columns)
+						# grouped_data = groupby(selected_columns, :EGFRgammaReads)
+						# grouped_data_DataFrame = DataFrame(grouped_data)
+						# println(grouped_data_DataFrame)
+			
+				result1 = Statistics.cor(cleaned_data[!,1],cleaned_data[!,2])
+				correlation1 = result1
+				println(correlation1)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(cor(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						test_info = DataFrame(cbs_result = correlation1, EGFRgammaReads = pvalue)
+						Test_Info = vcat(cleaned_data, test_info)
+						@time CSV.write(string(JuliaStatsDir,"\\","Pearson Correlation of Chebyshev Test and EGFRgammaReads on ", file, Dates.today(),".csv"), Test_Info)
+					else
+						error("x and y have different lengths")
+					end
+						
+						
+				result2 = StatsBase.corspearman(cleaned_data[!,1],cleaned_data[!,2])
+				correlation2 = result2
+				println(correlation2)
+					if length(cleaned_data[!,1]) == length(cleaned_data[!,2])
+						pvalue = 2 * ccdf(Normal(), atanh(abs(corspearman(cleaned_data[!,1],cleaned_data[!,2]))) * sqrt(length(cleaned_data[!,1]) - 3))
+						println(pvalue)
+						testinfo = DataFrame(cbs_result = correlation2, EGFRgammaReads = pvalue)
+						TestInfo = vcat(cleaned_data, testinfo)
+						@time CSV.write(string(JuliaStatsDir,"\\","Spearmann Correlation of Chebyshev Test and EGFRgammaReads on ", file, Dates.today(),".csv"), TestInfo)
+					else
+						error("x and y have different lengths")
+					end
+			end
+		end
+function RunStatistics_Inter(directory)
+		QueryDirectory = directory
+		JuliaStatsDir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\interdist\\Julia-Stats"
+		ReadingFiles3 = readdir(directory)
+		println(ReadingFiles3)
+
+	# 25 - Unequal Variance Test and Mann Whitney of KS and pT (pairwise)
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+            filepath = joinpath(directory, file)
+            query_file = CSV.File(filepath) |> DataFrame
+            column_names = strip.(names(query_file))
+            println(column_names)
+            query_file.pT = replace.(query_file.pT, r"\s+$" => "")
+
+            selected_columns = select(query_file, :ks_result, :pT)
+			#println(selected_columns)
+            grouped_data = groupby(selected_columns, :pT)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data)
+			#println(grouped_data[1][!,1])
+			
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = NaN 
+			try
+				pvalue_test1 = pvalue(result1)
+				println(pvalue_test1)
+			catch err
+				pvalue_test1 = NaN
+				println("Error occurred; pvalue = NaN")
+			end
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF1 = n1+n2-2
+			println(DoF1)
+			result2 = UnequalVarianceTTest(grouped_data[2][!,1],grouped_data[3][!,1])
+			pvalue_test2 = NaN
+			try
+				pvalue_test2 = pvalue(result2)
+				println(pvalue_test2)
+			catch err
+				pvalue_test2 = NaN
+				println("Error occurred; pvalue = NaN")
+			end
+			n1=length(grouped_data[2][!,1])
+			n2 = length(grouped_data[3][!,1])
+			DoF2 = n1+n2-2
+			println(DoF2)
+			result3 = UnequalVarianceTTest(grouped_data[3][!,1],grouped_data[4][!,1])
+			pvalue_test3 = NaN
+			try
+				pvalue_test3 = pvalue(result3)
+				println(pvalue_test3)
+			catch err 
+				pvalue_test3 = NaN
+				println("Error occurred; PValue = NaN")
+			end
+			n1=length(grouped_data[3][!,1])
+			n2 = length(grouped_data[4][!,1])
+			DoF3 = n1+n2-2
+			println(DoF3)
+			result4 = UnequalVarianceTTest(grouped_data[4][!,1],grouped_data[5][!,1])
+			pvalue_test4 = NaN
+			try
+				pvalue_test4 = pvalue(result4)
+				println(pvalue_test4)
+			catch err
+				pvalue_test4 = NaN
+				println("Error occurred; PValue = NaN")
+			end
+			n1=length(grouped_data[4][!,1])
+			n2 = length(grouped_data[5][!,1])
+			DoF4 = n1+n2-2
+			println(DoF4)
+			result5 = UnequalVarianceTTest(grouped_data[5][!,1],grouped_data[6][!,1])
+			pvalue_test5 = NaN
+			try
+				pvalue_test5 = pvalue(result5)
+				println(pvalue_test5)
+			catch err
+				pvalue_test5 = NaN
+				println("Error occurred; PValue = NaN")
+			end
+			n1=length(grouped_data[5][!,1])
+			n2 = length(grouped_data[6][!,1])
+			DoF5 = n1+n2-2
+			println(DoF5)
+			result6 = UnequalVarianceTTest(grouped_data[6][!,1],grouped_data[7][!,1])
+			pvalue_test6 = NaN
+			try
+				pvalue_test6 = pvalue(result6)
+				println(pvalue_test6)
+			catch err
+				pvalue_test6 = NaN
+				println("Error occured; pvalue = NaN")
+			end
+			n1=length(grouped_data[6][!,1])
+			n2 = length(grouped_data[7][!,1])
+			DoF6 = n1+n2-2
+			println(DoF6)
+			pvalue_test7 = NaN
+			DoF7 = NaN
+			try
+				result7 = UnequalVarianceTTest(grouped_data[7][!,1],grouped_data[8][!,1])
+				pvalue_test7 = pvalue(result7)
+				println(pvalue_test7)
+				n1=length(grouped_data[7][!,1])
+				n2 = length(grouped_data[8][!,1])
+				DoF7 = n1+n2-2
+				println(DoF7)
+			catch err
+				pvalue_test7 = NaN
+				println("Error occurred; PValue = NaN")
+			end
+			test_info1 = DataFrame(ks_result = pvalue_test1, pT = DoF1)
+			Test_Info = vcat(grouped_data_DataFrame, test_info1)
+			test_info2 = DataFrame(ks_result = pvalue_test2, pT = DoF2)
+			Test_Info2 = vcat(Test_Info, test_info2)
+			test_info3 = DataFrame(ks_result = pvalue_test3, pT = DoF3)
+			Test_Info3 = vcat(Test_Info2,test_info3)
+			test_info4 = DataFrame(ks_result = pvalue_test4, pT = DoF4)
+			Test_Info4 = vcat(Test_Info3,test_info4)
+			test_info5 = DataFrame(ks_result = pvalue_test5, pT = DoF5)
+			Test_Info5 = vcat(Test_Info4,test_info5)
+			test_info6 = DataFrame(ks_result = pvalue_test6, pT = DoF6)
+			Test_Info6 = vcat(Test_Info5,test_info6)
+			test_info7 = DataFrame(ks_result = pvalue_test7, pT = DoF7)
+			Test_Info7 = vcat(Test_Info6,test_info7)
+			println(Test_Info7)
+			#@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and pT on ", file, Dates.today(),".csv"), Test_Info7)
+			
+			result8 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test8 = pvalue(result8)
+			println(pvalue_test8)
+			result9 = MannWhitneyUTest(grouped_data[2][!,1],grouped_data[3][!,1])
+			pvalue_test9 = pvalue(result9)
+			println(pvalue_test9)
+			result10 = MannWhitneyUTest(grouped_data[3][!,1],grouped_data[4][!,1])
+			pvalue_test10 = pvalue(result10)
+			println(pvalue_test10)
+			result11 = MannWhitneyUTest(grouped_data[4][!,1],grouped_data[5][!,1])
+			pvalue_test11 = pvalue(result11)
+			println(pvalue_test11)
+			result12 = MannWhitneyUTest(grouped_data[5][!,1],grouped_data[6][!,1])
+			pvalue_test12 = pvalue(result12)
+			println(pvalue_test12)
+			result13 = MannWhitneyUTest(grouped_data[6][!,1],grouped_data[7][!,1])
+			pvalue_test13 = pvalue(result13)
+			println(pvalue_test13)
+			pvalue_test14 = NaN
+			try
+				result14 = MannWhitneyUTest(grouped_data[7][!,1],grouped_data[8][!,1])
+				pvalue_test14 = pvalue(result14)
+				println(pvalue_test14)
+			catch err
+				pvalue_test14 = NaN
+				println("Error occured; pvalue = NaN")
+			end
+			testinfo8 = DataFrame(ks_result = pvalue_test8, pT = ~)
+			TestInfo8 = vcat(grouped_data_DataFrame, testinfo8)
+			testinfo9 = DataFrame(ks_result = pvalue_test9, pT = ~)
+			TestInfo9 = vcat(TestInfo8, testinfo9)
+			testinfo10 = DataFrame(ks_result = pvalue_test10, pT = ~)
+			TestInfo10 = vcat(TestInfo9, testinfo10)
+			testinfo11 = DataFrame(ks_result = pvalue_test11, pT = ~)
+			TestInfo11 = vcat(TestInfo10, testinfo11)
+			testinfo12 = DataFrame(ks_result = pvalue_test12, pT = ~)
+			TestInfo12 = vcat(TestInfo11, testinfo12)
+			testinfo13 = DataFrame(ks_result = pvalue_test13, pT = ~)
+			TestInfo13 = vcat(TestInfo12, testinfo13)
+			testinfo14 = DataFrame(ks_result = pvalue_test14, pT = ~)
+			TestInfo14 = vcat(TestInfo13, testinfo14)
+			println(TestInfo14)
+			#@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of KS Test and pT on ", file, Dates.today(),".csv"), TestInfo14)
+	 	end
+	 end
+
+	# 26 - Unequal Variance Test and Mann Whitney of Chebyshev and pT (pairwise)
+	for file in ReadingFiles3
+		if occursin(".csv", file)
+			filepath = joinpath(directory, file)
+			query_file = CSV.File(filepath) |> DataFrame
+			column_names = strip.(names(query_file))
+			println(column_names)
+				
+			selected_columns = select(query_file, :cbs_result, :pT)
+			#println(selected_columns)
+			grouped_data = groupby(selected_columns, :pT)
+			grouped_data_DataFrame = DataFrame(grouped_data)
+			println(grouped_data_DataFrame)
+				
+			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test1 = NaN 
+			try
+				pvalue_test1 = pvalue(result1)
+				println(pvalue_test1)
+			catch err
+				pvalue_test1 = NaN
+				println("Error occurred; pvalue = NaN")
+			end
+			n1=length(grouped_data[1][!,1])
+			n2 = length(grouped_data[2][!,1])
+			DoF1 = n1+n2-2
+			println(DoF1)
+			result2 = UnequalVarianceTTest(grouped_data[2][!,1],grouped_data[3][!,1])
+			pvalue_test2 = pvalue(result2)
+			println(pvalue_test2)
+			n1=length(grouped_data[2][!,1])
+			n2 = length(grouped_data[3][!,1])
+			DoF2 = n1+n2-2
+			println(DoF2)
+			result3 = UnequalVarianceTTest(grouped_data[3][!,1],grouped_data[4][!,1])
+			pvalue_test3 = pvalue(result3)
+			println(pvalue_test3)
+			n1=length(grouped_data[3][!,1])
+			n2 = length(grouped_data[4][!,1])
+			DoF3 = n1+n2-2
+			println(DoF3)
+			result4 = UnequalVarianceTTest(grouped_data[4][!,1],grouped_data[5][!,1])
+			pvalue_test4 = NaN
+			try
+				pvalue_test4 = pvalue(result4)
+				println(pvalue_test4)
+			catch err
+				pvalue_test4 = NaN
+				println("Error occurred; pvalue = NaN")
+			end
+			n1=length(grouped_data[4][!,1])
+			n2 = length(grouped_data[5][!,1])
+			DoF4 = n1+n2-2
+			println(DoF4)
+			result5 = UnequalVarianceTTest(grouped_data[5][!,1],grouped_data[6][!,1])
+			pvalue_test5 = NaN
+			try
+				pvalue_test5 = pvalue(result5)
+				println(pvalue_test5)
+			catch err
+				pvalue_test5 = NaN
+				println("Error occurred; pvalue = NaN")
+			end
+			n1=length(grouped_data[5][!,1])
+			n2 = length(grouped_data[6][!,1])
+			DoF5 = n1+n2-2
+			println(DoF5)
+			result6 = UnequalVarianceTTest(grouped_data[6][!,1],grouped_data[7][!,1])
+			pvalue_test6 = NaN
+			try
+				pvalue_test6 = pvalue(result6)
+				println(pvalue_test6)
+			catch err
+				pvalue_test6 = NaN
+				println("Error occured; pvalue = NaN")
+			end
+			n1=length(grouped_data[6][!,1])
+			n2 = length(grouped_data[7][!,1])
+			DoF6 = n1+n2-2
+			println(DoF6)
+			pvalue_test7 = NaN
+			DoF7 = NaN
+			try
+				result7 = UnequalVarianceTTest(grouped_data[7][!,1],grouped_data[8][!,1])
+				pvalue_test7 = pvalue(result7)
+				println(pvalue_test7)
+				n1=length(grouped_data[7][!,1])
+				n2 = length(grouped_data[8][!,1])
+				DoF7 = n1+n2-2
+				println(DoF7)
+			catch err
+				pvalue_test7 = NaN
+				println("Error occurred; PValue = NaN")
+			end
+			test_info1 = DataFrame(cbs_result = pvalue_test1, pT = DoF1)
+			Test_Info = vcat(grouped_data_DataFrame, test_info1)
+			test_info2 = DataFrame(cbs_result = pvalue_test2, pT = DoF2)
+			Test_Info2 = vcat(Test_Info, test_info2)
+			test_info3 = DataFrame(cbs_result = pvalue_test3, pT = DoF3)
+			Test_Info3 = vcat(Test_Info2,test_info3)
+			test_info4 = DataFrame(cbs_result = pvalue_test4, pT = DoF4)
+			Test_Info4 = vcat(Test_Info3,test_info4)
+			test_info5 = DataFrame(cbs_result = pvalue_test5, pT = DoF5)
+			Test_Info5 = vcat(Test_Info4,test_info5)
+			test_info6 = DataFrame(cbs_result = pvalue_test6, pT = DoF6)
+			Test_Info6 = vcat(Test_Info5,test_info6)
+			test_info7 = DataFrame(cbs_result = pvalue_test7, pT = DoF7)
+			Test_Info7 = vcat(Test_Info6,test_info7)
+			println(Test_Info7)
+			#@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and pT on ", file, Dates.today(),".csv"), Test_Info7)
+			
+			result8 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+			pvalue_test8 = pvalue(result8)
+			println(pvalue_test8)
+			result9 = MannWhitneyUTest(grouped_data[2][!,1],grouped_data[3][!,1])
+			pvalue_test9 = pvalue(result9)
+			println(pvalue_test9)
+			result10 = MannWhitneyUTest(grouped_data[3][!,1],grouped_data[4][!,1])
+			pvalue_test10 = pvalue(result10)
+			println(pvalue_test10)
+			result11 = MannWhitneyUTest(grouped_data[4][!,1],grouped_data[5][!,1])
+			pvalue_test11 = pvalue(result11)
+			println(pvalue_test11)
+			result12 = MannWhitneyUTest(grouped_data[5][!,1],grouped_data[6][!,1])
+			pvalue_test12 = pvalue(result12)
+			println(pvalue_test12)
+			result13 = MannWhitneyUTest(grouped_data[6][!,1],grouped_data[7][!,1])
+			pvalue_test13 = pvalue(result13)
+			println(pvalue_test13)
+			result14 = MannWhitneyUTest(grouped_data[7][!,1],grouped_data[8][!,1])
+			pvalue_test14 = pvalue(result14)
+			println(pvalue_test14)
+			testinfo8 = DataFrame(cbs_result = pvalue_test8, pT = ~)
+			TestInfo8 = vcat(grouped_data_DataFrame, testinfo8)
+			testinfo9 = DataFrame(cbs_result = pvalue_test9, pT = ~)
+			TestInfo9 = vcat(TestInfo8, testinfo9)
+			testinfo10 = DataFrame(cbs_result = pvalue_test10, pT = ~)
+			TestInfo10 = vcat(TestInfo9, testinfo10)
+			testinfo11 = DataFrame(cbs_result = pvalue_test11, pT = ~)
+			TestInfo11 = vcat(TestInfo10, testinfo11)
+			testinfo12 = DataFrame(cbs_result = pvalue_test12, pT = ~)
+			TestInfo12 = vcat(TestInfo11, testinfo12)
+			testinfo13 = DataFrame(cbs_result = pvalue_test13, pT = ~)
+			TestInfo13 = vcat(TestInfo12, testinfo13)
+			testinfo14 = DataFrame(cbs_result = pvalue_test14, pT = ~)
+			TestInfo14 = vcat(TestInfo13, testinfo14)
+			println(TestInfo14)
+			#@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and pT on ", file, Dates.today(),".csv"), TestInfo14)
 		end
 	end
 end
