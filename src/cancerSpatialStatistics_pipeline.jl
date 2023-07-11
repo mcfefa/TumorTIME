@@ -324,7 +324,7 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
 	#panelName wants a string that identifies which panel subfolder ("Panel-1" or "Panel-2") to use
 		## panelName = "Panel-2"
 	#panelLoc wants a string that identifies which location folder (tumor, stroma, interface, normal) to use
-		## panleLoc = "tumor"
+		## panelLoc = "tumor"
 
 	# identifies the patient name based on the SP number
 	println(file)
@@ -490,7 +490,8 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
 	KSResults = RunKSTest(EmpiricalCDFs,TheoreticalCDFs,interdist_stats_df)
 	display(KSResults)
 
-	 ADResults=RunADTest(EmpiricalCDFs,TheoreticalCDFs,KSResults)
+	
+	#  ADResults=RunADTest(EmpiricalCDFs,TheoreticalCDFs,KSResults)
 
 	# function RunCramerVonMisesTest(dataEmp, dataNull, stats)
 	# 	CVMTest_col = DataFrame(CVM_result = [], CVM_p=[])
@@ -559,6 +560,7 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
  	# add a column to statistics DF that has patient name 
  	JSResults[:,:patient] .= indName 
 
+
  	# write interdistance statistcs to a CSV file 
 	 statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\stats\\"
  	@time CSV.write(string(statsdir, "\\", splitname,".interdistances_stats",Dates.today(),".csv"), JSResults)
@@ -567,9 +569,9 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
  	coltypesS[1]=String
  	coltypesS[2]=String
 
-	statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\"
-	@time JSResults1 = CSV.read(string(statsdir,"All-Clinical-Data-for-Interdistances-at-Panel1-Tumor2022-10-27.csv"),DataFrame,types=coltypesS)
-	JSResults = JSResults1[:,1:12]
+	# statsdir="C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\"
+	# @time JSResults1 = CSV.read(string(statsdir,"All-Clinical-Data-for-Interdistances-at-Panel1-Tumor2022-10-27.csv"),DataFrame,types=coltypesS)
+	# JSResults = JSResults1[:,1:12]
 
 	println(JSResults[1:5,:])
 
@@ -615,7 +617,7 @@ function TumorTIMEPipeline_Inter(directory1, file, marker, panelName, panelLoc)
 				i.median, 
 				i.std, i.var, 
 				i.kurtosis, i.skewness, i.ks_result, i.ks_p, 
-				i.ad_result, i.ad_p, 
+				i.kld_result, i.cbs_result, i.js_result,     
 				EGFRnormReads=j.EGFRnormReads, 
 				EGFRalphaReads=j.EGFRalphaReads,
 				EGFRbetaReads=j.EGFRbetaReads,
@@ -656,7 +658,7 @@ ReadingFiles = readdir(directory1)
 
 for i in 1:2#size(ReadingFiles)[1]-4
 	filenametemp = ReadingFiles[i]
-	TumorTIMEPipeline(directory1, filenametemp, markerPanel, "Panel-2", "tumor")
+	TumorTIMEPipeline_Inter(directory1, filenametemp, markerPanel, "Panel-2", "tumor")
 end
 
 function ConcatFiles_Inter(directory)
@@ -1536,7 +1538,6 @@ function RunStatistics_Inter(directory)
 					error("x and y have different lengths")
 				end
 		end
-	end
 
 	# #9 - Unequal Variance Test and Mann Whitney of KS and Grade (pairwise)
 	for file in ReadingFiles3
@@ -1780,14 +1781,14 @@ function RunStatistics_Inter(directory)
 			n2 = length(grouped_data[2][!,1])
 			DoF = n1+n2-2
 			println(DoF)
-			test_info = DataFrame(cbs_result = pvalue_test1, Gender = DoF)
+			test_info = DataFrame(cbs_result = pvalue_test1, SarcomatoidStatus = DoF)
 			Test_Info = vcat(grouped_data_DataFrame, test_info)
 			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and SarcomatoidStatus on ", file, Dates.today(),".csv"), Test_Info)
 			
 			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
 			pvalue_test2 = pvalue(result2)
 			println(pvalue_test2)
-			testinfo = DataFrame(cbs_result = pvalue_test2, Gender = ~)
+			testinfo = DataFrame(cbs_result = pvalue_test2, SarcomatoidStatus = ~)
 			TestInfo = vcat(grouped_data_DataFrame, testinfo)
 			println(TestInfo)
 			@time CSV.write(string(JuliaStatsDir,"\\","MannWhitney of Chebyshev Test and SarcomatoidStatus on ", file, Dates.today(),".csv"), TestInfo)
@@ -1808,20 +1809,34 @@ function RunStatistics_Inter(directory)
 			grouped_data_DataFrame = DataFrame(grouped_data)
 			println(grouped_data_DataFrame)
 
-			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
-			pvalue_test1 = pvalue(result1)
-			println(pvalue_test1)
-			n1=length(grouped_data[1][!,1])
-			n2 = length(grouped_data[2][!,1])
-			DoF = n1+n2-2
-			println(DoF)
+		
+			pvalue_test1 = NaN
+			DoF = NaN
+			try
+				result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+				pvalue_test1 = pvalue(result1)
+				println(pvalue_test1)
+				n1=length(grouped_data[1][!,1])
+				n2 = length(grouped_data[2][!,1])
+				DoF = n1+n2-2
+				println(DoF)
+			catch err
+				pvalue_test1 = NaN
+				println("Error occured, pvalue = NaN")
+			end
 			test_info = DataFrame(ks_result = pvalue_test1, RhabdoidStatus = DoF)
 			Test_Info = vcat(grouped_data_DataFrame, test_info)
 			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of KS Test and RhabdoidStatus on ", file, Dates.today(),".csv"), Test_Info)
 			
-			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
-			pvalue_test2 = pvalue(result2)
-			println(pvalue_test2)
+			pvalue_test2 = NaN
+			try
+				result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+				pvalue_test2 = pvalue(result2)
+				println(pvalue_test2)
+			catch err
+				pvalue_test2 = NaN
+				println("Error occured, Pvalue= NaN")
+			end
 			testinfo = DataFrame(ks_result = pvalue_test2, RhabdoidStatus = ~)
 			TestInfo = vcat(grouped_data_DataFrame, testinfo)
 			println(TestInfo)
@@ -1843,20 +1858,33 @@ function RunStatistics_Inter(directory)
 			grouped_data_DataFrame = DataFrame(grouped_data)
 			println(grouped_data_DataFrame)
 
-			result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
-			pvalue_test1 = pvalue(result1)
-			println(pvalue_test1)
-			n1=length(grouped_data[1][!,1])
-			n2 = length(grouped_data[2][!,1])
-			DoF = n1+n2-2
-			println(DoF)
+			pvalue_test1 = NaN
+			DoF = NaN
+			try
+				result1 = UnequalVarianceTTest(grouped_data[1][!,1],grouped_data[2][!,1])
+				pvalue_test1 = pvalue(result1)
+				println(pvalue_test1)
+				n1=length(grouped_data[1][!,1])
+				n2 = length(grouped_data[2][!,1])
+				DoF = n1+n2-2
+				println(DoF)
+			catch err
+				pvalue_test1 = NaN
+				println("Error occured, pvalue = NaN")
+			end
 			test_info = DataFrame(cbs_result = pvalue_test1, RhabdoidStatus = DoF)
 			Test_Info = vcat(grouped_data_DataFrame, test_info)
 			@time CSV.write(string(JuliaStatsDir,"\\","Unequal Variance of Chebyshev Test and SarcomatoidStatus on ", file, Dates.today(),".csv"), Test_Info)
 			
-			result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
-			pvalue_test2 = pvalue(result2)
-			println(pvalue_test2)
+			pvalue_test2 = NaN
+			try
+				result2 = MannWhitneyUTest(grouped_data[1][!,1],grouped_data[2][!,1])
+				pvalue_test2 = pvalue(result2)
+				println(pvalue_test2)
+			catch err
+				pvalue_test2 = NaN
+				println("Error occured, Pvalue= NaN")
+			end
 			testinfo = DataFrame(cbs_result = pvalue_test2, RhabdoidStatus = ~)
 			TestInfo = vcat(grouped_data_DataFrame, testinfo)
 			println(TestInfo)
@@ -2281,11 +2309,7 @@ function RunStatistics_Inter(directory)
 					end
 			end
 		end
-function RunStatistics_Inter(directory)
-		QueryDirectory = directory
-		JuliaStatsDir = "C:\\Users\\camara.casson\\Dropbox (UFL)\\research-share\\Camara\\ccRCC-TIME-analysis\\Results-and-Analysis\\Panel2-Tumor-Cutoff5\\interdist\\Julia-Stats"
-		ReadingFiles3 = readdir(directory)
-		println(ReadingFiles3)
+
 
 	# 25 - Unequal Variance Test and Mann Whitney of KS and pT (pairwise)
 	for file in ReadingFiles3
@@ -2587,9 +2611,15 @@ function RunStatistics_Inter(directory)
 			result13 = MannWhitneyUTest(grouped_data[6][!,1],grouped_data[7][!,1])
 			pvalue_test13 = pvalue(result13)
 			println(pvalue_test13)
-			result14 = MannWhitneyUTest(grouped_data[7][!,1],grouped_data[8][!,1])
-			pvalue_test14 = pvalue(result14)
-			println(pvalue_test14)
+			pvalue_test14 = NaN
+			try
+				result14 = MannWhitneyUTest(grouped_data[7][!,1],grouped_data[8][!,1])
+				pvalue_test14 = pvalue(result14)
+				println(pvalue_test14)
+			catch err
+				pvalue_test14 = NaN
+				println("Error occured; pvalue = NaN")
+			end
 			testinfo8 = DataFrame(cbs_result = pvalue_test8, pT = ~)
 			TestInfo8 = vcat(grouped_data_DataFrame, testinfo8)
 			testinfo9 = DataFrame(cbs_result = pvalue_test9, pT = ~)
